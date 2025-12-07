@@ -1,0 +1,1 @@
+singleton Color 1.0 Color.qml
