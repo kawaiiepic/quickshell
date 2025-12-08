@@ -22,7 +22,6 @@
           buildInputs = [
             quickshell
             pkgs.kdePackages.qtdeclarative
-            pkgs.clang-format
           ];
 
           shellHook = ''
