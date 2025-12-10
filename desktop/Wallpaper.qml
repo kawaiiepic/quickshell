@@ -27,7 +27,7 @@ Scope {
 
             Image {
                 anchors.fill: parent
-                source: "/home/mia/Downloads/wallhaven-gpgyw3.jpg"
+                source: "/home/mia/Downloads/8d00848209764be51803e8bad3677503.jpg"
                 fillMode: Image.PreserveAspectCrop
             }
         }

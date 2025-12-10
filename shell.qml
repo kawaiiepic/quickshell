@@ -1,3 +1,5 @@
+//@ pragma UseQApplication
+
 import Quickshell // for PanelWindow
 import Quickshell.Io
 import Quickshell.Wayland
@@ -12,6 +14,6 @@ Scope {
   // Shell
 
   Bar {}
-  // Desktop {}
+  Desktop {}
 
 }

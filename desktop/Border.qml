@@ -32,7 +32,7 @@ Scope {
                 id: border
                 anchors.fill: parent
                 color: "transparent"
-                border.width: 7
+                border.width: 9
                 border.color: Color.palette().base
                 antialiasing: true
             }
@@ -43,7 +43,7 @@ Scope {
                 radius: 30
                 color: "transparent"
                 clip: true
-                border.width: 6
+                border.width: 9
                 border.color: Color.palette().base
                 layer.enabled: true
                 layer.smooth: true

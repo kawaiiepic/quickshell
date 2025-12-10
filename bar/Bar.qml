@@ -16,6 +16,7 @@ Scope {
         model: Quickshell.screens
 
         PanelWindow {
+            id: barWindow
             required property var modelData
             screen: modelData
             color: Color.palette().base
@@ -28,12 +29,33 @@ Scope {
 
             implicitWidth: 30
 
-            Column {
+            ColumnLayout {
+                // anchors.fill: parent
                 anchors.horizontalCenter: parent.horizontalCenter
+                width: 22
+                spacing: 8
 
                 Launcher {}
 
                 Workspaces {}
+
+                // Item {
+                //     Layout.fillHeight: true
+                // }
+
+                ActiveWindow {}
+
+                Clock {}
+
+                Status {}
+
+                Power {}
+
+                // Item {
+                //     Layout.fillHeight: true
+                // } // flexible spacer
+
+                // SystemTray {}
             }
         }
     }

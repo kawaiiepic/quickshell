@@ -4,16 +4,16 @@ import QtQuick.Effects
 
 Rectangle {
     color: "transparent"
-    implicitWidth: 25
-    implicitHeight: 25
+    implicitWidth: 23
+    implicitHeight: 23
 
     Image {
         id: imageInstance
         source: "/home/mia/.face"
         anchors.centerIn: parent
         property int radius: 20
-        width: 25
-        height: 25
+        width: 23
+        height: 23
         visible: true
 
         layer.enabled: true

@@ -1,47 +1,44 @@
 import QtQuick
-import Qt5Compat.GraphicalEffects
+import QtQuick.Layouts
 import "../../modules/niri"
+import "../../colors"
 
-Column {
-    spacing: 5
-    anchors.horizontalCenter: parent.horizontalCenter
-    Repeater {
-        id: repeater
-        model: Niri.workspaces
+Rectangle {
+    width: parent.width
+    height: childrenRect.height
+    color: Color.palette().surface0
+    border.width: 0.5
+    border.color: Color.palette().mantle
+    radius: 10
 
-        Rectangle {
-            id: capsule
-            height: 18
-            width: Math.max(18, textItem.implicitWidth + 12)
-            radius: 10
+    ColumnLayout {
+        spacing: 5
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: 20
+        height: parent.height
+Layout.topMargin: 5
+        Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
 
-            color: Niri.workspaces[index].is_active ? '#ff0f4b' : '#f0f0f0'
-            border.width: Niri.workspaces[index].is_active ? 1.5 : 1
-            border.color: Niri.workspaces[index].is_active ? "#ffffff33" : "#ffffff15"
+        Repeater {
+            id: repeater
+            model: 5
+Layout.topMargin: 8
+            delegate: Text {
+                id: myText
 
-            layer.enabled: true
-            layer.samples: 4
-            layer.effect: OpacityMask {
-                maskSource: capsule
-            }
+                property int winCount: (Niri.workspaceFromIndex(index + 1) ? (Niri.windowsInWorkspace(Niri.workspaceFromIndex(index + 1)) || []).length : 0)
+                required property int index
 
-            Text {
-                id: textItem
-                anchors.centerIn: parent
-                text: Niri.workspaces[index].name
-                font.pixelSize: 13
-                color: Niri.workspaces[index].is_active ? "#fff" : "#cccccc"
-            }
+                Layout.preferredHeight: 20
+                Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
 
-            Behavior on color {
-                ColorAnimation {
-                    duration: 120
-                }
-            }
-            Behavior on border.width {
-                NumberAnimation {
-                    duration: 120
-                }
+                font.pixelSize: winCount > 0 ? 16 : 10
+                color: Niri.workspaceFromIndex(index + 1)?.is_focused ? Color.palette().pink : winCount > 0 ? Color.palette().text : Color.palette().surface2
+                text: Niri.workspaceFromIndex(index + 1)
+                          ? (winCount > 0
+                              ? ({1: "", 2: "", 3: "󰙯", 4: "", 5: ""}[Niri.workspaceFromIndex(index + 1).name] || ".")
+                              : "")
+                          : "?"
             }
         }
     }
