@@ -3,46 +3,46 @@ import QtQuick.Layouts
 import Quickshell.Services.SystemTray
 import Quickshell
 
-Rectangle {
-    width: parent.width
-    height: childrenRect.height
-    color: "lightgray"
-    radius: 10
-    ColumnLayout {
-        spacing: 4
-        // iterate over all registered tray items
-        Repeater {
-            model: SystemTray.items
+ColumnLayout {
+    // iterate over all registered tray items
+    Repeater {
+        model: SystemTray.items.values
 
-            Item {
-                id: item
-                required property SystemTrayItem modelData
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: parent.width
-                height: childrenRect.height
+        Item {
+            id: item
+            required property SystemTrayItem modelData
+            // anchors.horizontalCenter: parent.horizontalCenter
+            Layout.fillWidth: true
+            implicitHeight: icon.height
+            enabled: true
 
-                Image {
-                    width: 15
-                    height: 15
-                    source: item.modelData.icon
-                }
+            Image {
+                id: icon
+                width: 15
+                height: 15
+                source: item.modelData.icon
+                anchors.centerIn: parent
+            }
 
-                QsMenuAnchor {
-                    id: anchor
-                    anchor.item: item.parent
-                    menu: item.modelData.menu  // the tray item menu
-                }
+            QsMenuAnchor {
+                id: anchor
+                anchor.item: item.parent
+                menu: item.modelData.menu  // the tray item menu
+            }
 
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+            MouseArea {
+                width: icon.width
+                height: icon.height
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
 
-                    onClicked: {
-                        if (mouse.button === Qt.LeftButton) {
-                            model.activate();
-                        } else if (mouse.button === Qt.RightButton && model.menu) {
-                            anchor.open();  // show anchored menu
-                        }
+                onEntered: print("hover")
+
+                onClicked: mouse => {
+                    print("Clicked!");
+                    if (mouse.button === Qt.LeftButton) {
+                        item.modelData.activate();
+                    } else if (mouse.button === Qt.RightButton && item.modelData.menu) {
+                        anchor.open();  // show anchored menu
                     }
                 }
             }

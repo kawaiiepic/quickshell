@@ -16,6 +16,9 @@
         pkgs = import inputs.nixpkgs { inherit system; };
         quickshell =  inputs.quickshell.packages.${system}.default.withModules [
           pkgs.kdePackages.qt5compat
+          pkgs.kdePackages.qtimageformats
+          pkgs.kdePackages.qtmultimedia
+
         ];
 
         devShells.default = pkgs.mkShell {

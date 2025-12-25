@@ -26,8 +26,9 @@ Scope {
             aboveWindows: false
 
             Image {
+                id: image
                 anchors.fill: parent
-                source: "/home/mia/Downloads/8d00848209764be51803e8bad3677503.jpg"
+                source: root.wallpaperSrc
                 fillMode: Image.PreserveAspectCrop
             }
         }

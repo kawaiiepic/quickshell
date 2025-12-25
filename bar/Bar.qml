@@ -10,7 +10,6 @@ import "../modules/niri"
 
 Scope {
     id: root
-    property string time
 
     Variants {
         model: Quickshell.screens
@@ -30,32 +29,38 @@ Scope {
             implicitWidth: 30
 
             ColumnLayout {
-                // anchors.fill: parent
-                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.right: parent.right
                 width: 22
+                height: parent.height
                 spacing: 8
 
-                Launcher {}
+                Launcher {
+                    Layout.topMargin: 5
+                }
 
                 Workspaces {}
 
-                // Item {
-                //     Layout.fillHeight: true
-                // }
+                Item {
+                    Layout.fillHeight: true
+                }
 
                 ActiveWindow {}
+
+                Item {
+                    Layout.fillHeight: true
+                }
+
+                SystemTray {}
 
                 Clock {}
 
                 Status {}
 
-                Power {}
+                Power {
+                    Layout.bottomMargin: 5
+                }
 
-                // Item {
-                //     Layout.fillHeight: true
-                // } // flexible spacer
-
-                // SystemTray {}
+                //
             }
         }
     }

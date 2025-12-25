@@ -1,7 +1,10 @@
 import QtQuick
+import QtQuick.Layouts
+import "../../colors"
 
 Text {
-    color: "red"
     text: "⏻"
-    anchors.horizontalCenter: parent.horizontalCenter
+    Layout.alignment: Qt.AlignBottom
+    // anchors.horizontalCenter: parent.horizontalCenter
+    color: Color.palette().red
 }

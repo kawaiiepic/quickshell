@@ -1,19 +1,18 @@
 //@ pragma UseQApplication
+//@ pragma IconTheme Papirus
 
 import Quickshell // for PanelWindow
-import Quickshell.Io
-import Quickshell.Wayland
 import QtQuick // for Text
-import Qt5Compat.GraphicalEffects
-import "./colors"
 import "./desktop"
 import "./bar"
-import "./modules/niri"
+import "./notifications"
+import "./controlcenter"
 
 Scope {
   // Shell
-
   Bar {}
   Desktop {}
+  Notifications {}
+  ControlCenter {}
 
 }
