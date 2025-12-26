@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
@@ -12,43 +13,32 @@ import "../services" as Services
 import QtQml.Models
 
 Scope {
-    id: controlCenter
+    id: root
+    property bool show: false
 
     Variants {
         model: Quickshell.screens
 
         PanelWindow {
-            id: root
+            id: hoverTrigger
             required property var modelData
 
-            property var hoverBarRegion: Region {
-                item: hoverBar
-            }
-
-            property var bothRegions: Region {
-                item: panelContent
-            }
-
             screen: modelData
-            visible: true
-            mask: Region {item: panelContent}
 
             color: "transparent"
             WlrLayershell.layer: WlrLayer.Overlay
-            WlrLayershell.keyboardFocus: panelContent.show ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
             exclusionMode: ExclusionMode.Normal
             anchors {
                 bottom: true
             }
 
             implicitWidth: screen.width / 2.5
-            implicitHeight: Math.min(400, screen.height - 40)
+            implicitHeight: 1
 
             Rectangle {
                 id: hoverBar
-                color: "transparent"
-                height: 1
-                width: 500
+                color: hoverTrigger.color
+                anchors.fill: parent
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
 
@@ -57,19 +47,38 @@ Scope {
                     hoverEnabled: true
 
                     onEntered: {
-                        panelContent.show = true;
-
-                        if (panelContent.visible == false)
-                            panelContent.visible = true;
+                        root.show = true;
                     }
                 }
             }
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            id: bottom
+            required property var modelData
+
+            screen: modelData
+
+            visible: root.show
+
+            color: "transparent"
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.keyboardFocus: root.show ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+            exclusionMode: ExclusionMode.Normal
+            anchors {
+                bottom: true
+            }
+
+            implicitWidth: screen.width / 2.5
+            implicitHeight: Math.min(400, screen.height - 40)
 
             FocusScope {
                 id: panelContent
                 anchors.fill: parent
-                property bool show: false
-                visible: false
 
                 x: rectangle.x
                 y: rectangle.y
@@ -78,7 +87,7 @@ Scope {
 
                 // Show Animation - Material 3 emphasized decelerate
                 SequentialAnimation {
-                    running: panelContent.show
+                    running: root.show
                     ParallelAnimation {
                         NumberAnimation {
                             target: panelContent
@@ -101,7 +110,7 @@ Scope {
                 }
 
                 SequentialAnimation {
-                    running: !panelContent.show
+                    running: !root.show
                     ParallelAnimation {
                         NumberAnimation {
                             target: panelContent
@@ -132,15 +141,6 @@ Scope {
 
                     border.width: 1.5
                     border.color: Color.palette().crust
-                    Keys.onPressed: event => {
-                        if (event.key == Qt.Key_A)
-                            print("Pressed A");
-                        if (event.key === Qt.Key_Escape) {
-                            print("Test");
-                            panelContent.show = false;
-                            event.accepted = true; // Stop event propagation
-                        }
-                    }
 
                     color: Color.palette().base
 
@@ -161,18 +161,27 @@ Scope {
                         spacing: 12
 
                         property var filteredApplications: DesktopEntries.applications.values.filter(app => {
-                            return app.name.toLowerCase().includes(myTextInput.text.toLowerCase());
+                            return app.name.toLowerCase().includes(field.text.toLowerCase());
                         })
 
                         ScrollView {
-                            anchors.fill: parent
+                            // anchors.fill: parent
+                            // Layout.fillHeight: true
+                            anchors {
+                                top: parent.top
+                                left: parent.left
+                                right: parent.right
+                                bottom: searchBar.top
+                                bottomMargin: 16
+                            }
+                            Layout.fillWidth: true
                             ListView {
                                 model: appList.filteredApplications
 
                                 delegate: Item {
                                     id: entry
                                     required property DesktopEntry modelData
-                                    width: parent.width
+                                    width: 200
                                     height: 48
 
                                     Rectangle {
@@ -221,25 +230,91 @@ Scope {
                             }
                         }
 
-                        TextField {
-                            id: myTextInput
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            placeholderText: "Search..."
-                            // text: "Focus here and press Esc"
-                            focus: true // Set initial focus for demonstration
+                        Rectangle {
+                            id: searchBar
 
-                            // This block of code runs when the Escape key is pressed
-                            Keys.onEscapePressed: {
-                                console.log("Escape key pressed! Running custom code.");
-                                print("Test");
-                                panelContent.show = false;
+                            Layout.preferredHeight: 44
+                            radius: height / 2
+                            color: "red"
+
+                            anchors {
+                                left: parent.left
+                                right: parent.right
+                                bottom: parent.bottom
+                                bottomMargin: 5
+                                leftMargin: 10
+                                rightMargin: 10
                             }
 
-                            Keys.onEnterPressed: {}
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10
+
+                                // Search icon
+                                Text {
+                                    text: "🔍"
+                                    font.pixelSize: 18
+                                    opacity: 0.55
+                                }
+
+                                TextField {
+                                    id: field
+                                    Layout.fillWidth: true
+                                    background: null
+                                    placeholderText: "search..."
+                                    font.pixelSize: 16
+                                    cursorVisible: true
+                                    selectByMouse: true
+
+                                    focus: true // Set initial focus for demonstration
+
+                                    //     // This block of code runs when the Escape key is pressed
+                                    Keys.onEscapePressed: {
+                                        field.text = "";
+                                        root.show = false;
+                                    }
+                                }
+
+                                // Clear button
+                                MouseArea {
+                                    visible: field.text.length > 0
+                                    Layout.alignment: Qt.AlignVCenter6
+                                    width: 24
+                                    height: 24
+                                    cursorShape: Qt.PointingHandCursor
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "✕"
+                                        font.pixelSize: 14
+                                        opacity: 0.6
+                                    }
+
+                                    onClicked: field.clear()
+                                }
+                            }
                         }
 
+                        // TextField {
+                        //     id: myTextInput
+                        //     Layout.fillWidth: true
+                        //     placeholderText: "Search..."
+                        //     // text: "Focus here and press Esc"
+                        //     focus: true // Set initial focus for demonstration
+
+                        //     // This block of code runs when the Escape key is pressed
+                        //     Keys.onEscapePressed: {
+                        //         console.log("Escape key pressed! Running custom code.");
+                        //         print("Test");
+                        //         myTextInput.text = ""
+                        //         root.show = false;
+                        //     }
+
+                        //     Keys.onEnterPressed: {}
+                        // }
+
                         Component.onCompleted: {
-                            myTextInput.forceActiveFocus();
+                            field.forceActiveFocus();
                         }
                     }
                 }
