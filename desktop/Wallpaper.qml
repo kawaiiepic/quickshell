@@ -4,6 +4,7 @@ import Quickshell.Io
 import QtQuick
 import Quickshell.Wayland
 import "../colors"
+import "../services"
 
 Scope {
     id: wallpaper
@@ -28,7 +29,7 @@ Scope {
             Image {
                 id: image
                 anchors.fill: parent
-                source: root.wallpaperSrc
+                source: WallpaperManager.currentWallpaper.path
                 fillMode: Image.PreserveAspectCrop
             }
         }

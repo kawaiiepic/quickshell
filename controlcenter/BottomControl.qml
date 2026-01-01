@@ -9,8 +9,11 @@ import "../colors"
 import "./components"
 import "../components/effects"
 import "../components"
-import "../services" as Services
+import "../services"
 import QtQml.Models
+import Qt.labs.folderlistmodel
+import Quickshell.Io
+import Quickshell.Widgets
 
 Scope {
     id: root
@@ -55,7 +58,7 @@ Scope {
     }
 
     Variants {
-        model: Quickshell.screens
+        model: Quickshell.screens.filter(screen => screen.x == 0)
 
         PanelWindow {
             id: bottom
@@ -160,68 +163,158 @@ Scope {
                         anchors.fill: parent
                         spacing: 12
 
-                        property var filteredApplications: DesktopEntries.applications.values.filter(app => {
-                            return app.name.toLowerCase().includes(field.text.toLowerCase());
-                        })
+                        // property var filteredApplications: {
+                        //     const query = field.text.toLowerCase();
+                        //     const customCommands = [
+                        //         {
+                        //             type: "command",
+                        //             icon: "󰸉",
+                        //             name: "Wallpaper",
+                        //             desc: "Change the current wallpaper"
+                        //         }
+                        //     ];
+                        //     const out = [];
 
-                        ScrollView {
-                            // anchors.fill: parent
-                            // Layout.fillHeight: true
-                            anchors {
-                                top: parent.top
-                                left: parent.left
-                                right: parent.right
-                                bottom: searchBar.top
-                                bottomMargin: 16
-                            }
+                        //     // command entry
+                        //     if (query.startsWith(">")) {
+                        //         for (const command of customCommands) {
+                        //             if (command.name.toLowerCase().includes(query.slice(1).trim().toLowerCase())) {
+                        //                 out.push(command);
+                        //             }
+                        //         }
+                        //         // out.push({
+                        //         //     type: "command",
+                        //         //     name: "change wallpaper"
+                        //         // });
+                        //     }
+
+                        //     // app entries
+                        //     for (const app of DesktopEntries.applications.values) {
+                        //         if (app.name.toLowerCase().includes(query.toLowerCase())) {
+                        //             out.push({
+                        //                 type: "app",
+                        //                 desktopEntry: app
+                        //             });
+                        //         }
+                        //     }
+
+                        //     return out;
+                        // }
+
+                        Item {
+                            id: content
+                            property string mode: "wallpaper"
+
+                            Layout.fillHeight: true
                             Layout.fillWidth: true
-                            ListView {
-                                model: appList.filteredApplications
 
-                                delegate: Item {
-                                    id: entry
-                                    required property DesktopEntry modelData
-                                    width: 200
-                                    height: 48
+                            Loader {
+                                id: loader
+                                anchors.fill: parent
 
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        radius: 12
-                                        color: ListView.isCurrentItem ? Color.palette().surface : "transparent"
+                                sourceComponent: {
+                                    switch (content.mode) {
+                                    case "apps":
+                                        return appsComp;
+                                    case "wallpaper":
+                                        return wallpaperComp;
+                                    }
+                                }
+                                onLoaded: {
+                                    switch (content.mode) {
+                                    case "wallpaper":
+                                        bottom.implicitHeight = 250;
+                                    }
+                                }
+                            }
 
-                                        Row {
-                                            anchors.fill: parent
-                                            anchors.margins: 12
-                                            spacing: 12
+                            Component {
+                                id: appsComp
+                                Item {
+                                    Text {
+                                        text: "Testing"
+                                    }
+                                }
+                            }
 
-                                            // App icon (optional but recommended)
-                                            Image {
-                                                source: Quickshell.iconPath(entry.modelData.icon)
-                                                width: 24
-                                                height: 24
-                                                fillMode: Image.PreserveAspectFit
-                                                visible: source !== ""
+                            Component {
+                                id: wallpaperComp
+                                Item {
+
+                                    Process {
+                                        id: process
+                                    }
+
+                                    ListView {
+                                        id: list
+                                        width: content.width
+                                        height: content.height
+                                        orientation: ListView.Horizontal
+                                        reuseItems: true
+                                        spacing: 8
+
+                                        anchors.verticalCenter: content.verticalCenter
+
+                                        model: WallpaperManager.wallpaperList
+
+                                        delegate: Item {
+                                            id: wall
+                                            required property int index
+                                            required property string fileName
+                                            required property string filePath
+
+                                            // anchors.horizontalCenter: parent.horizontalCenter
+                                            // anchors.verticalCenter: content.verticalCenter
+
+                                            width: WallpaperManager.currentWallpaper.path == filePath ? 250 : 200
+                                            height: list.height
+
+                                            Loader {
+                                                id: clipLoader
+                                                active: list.visible
+                                                sourceComponent: wallComp
                                             }
 
-                                            Column {
-                                                spacing: 2
-                                                anchors.verticalCenter: parent.verticalCenter
+                                            Component {
+                                                id: wallComp
+                                                Item {
+                                                    id: rec
 
-                                                Text {
-                                                    text: entry.modelData.name
-                                                    font.pixelSize: 15
-                                                    font.weight: Font.Medium
-                                                    color: Color.palette().text
-                                                    elide: Text.ElideRight
-                                                }
+                                                    Column {
+                                                        anchors.centerIn: wall
+                                                        spacing: 8
 
-                                                // Optional subtitle (exec / comment)
-                                                Text {
-                                                    text: entry.modelData.comment || entry.modelData.execString
-                                                    font.pixelSize: 11
-                                                    color: Color.palette().subtext0
-                                                    elide: Text.ElideRight
-                                                    visible: text.length > 0
+                                                        ClippingRectangle {
+                                                            implicitWidth: wall.width
+                                                            implicitHeight: WallpaperManager.currentWallpaper.path == wall.filePath ? 150 : 120
+                                                            radius: 12
+                                                            clip: true
+
+                                                            Image {
+                                                                anchors.fill: parent
+                                                                source: wall.filePath
+                                                                fillMode: Image.PreserveAspectCrop
+                                                            }
+
+                                                            MouseArea {
+                                                                anchors.fill: parent
+                                                                onClicked: {
+                                                                    WallpaperManager.setWallpaper(wall.index);
+                                                                    process.command = ["notify-send", "Updated Wallpaper"];
+                                                                    process.running = true;
+                                                                }
+                                                            }
+                                                        }
+
+                                                        Text {
+                                                            text: wall.fileName.replace(".jpg", "").replace(".png", "")
+                                                            font.pixelSize: 14
+                                                            horizontalAlignment: Text.AlignHCenter
+                                                            color: Color.palette().text
+                                                            elide: Text.ElideRight
+                                                            width: wall.width
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -229,13 +322,151 @@ Scope {
                                 }
                             }
                         }
+                        // ScrollView {
+                        //     anchors {
+                        //         top: parent.top
+                        //         left: parent.left
+                        //         right: parent.right
+                        //         bottom: searchBar.top
+                        //         bottomMargin: 16
+                        //     }
+                        //     Layout.fillWidth: true
+                        //     ListView {
+                        //         id: listView
+                        //         model: appList.filteredApplications
+                        //         clip: true
+
+                        //         delegate: DelegateChooser {
+                        //             id: entry
+                        //             role: "type"
+
+                        //             // COMMAND ROW
+                        //             DelegateChoice {
+                        //                 roleValue: "command"
+
+                        //                 Item {
+                        //                     id: boop
+                        //                     width: listView.width
+                        //                     height: 48
+                        //                     required property var model
+
+                        //                     function activate() {
+                        //                         console.log("custom command activated");
+                        //                     }
+
+                        //                     MouseArea {
+                        //                         anchors.fill: parent
+                        //                         onClicked: {
+                        //                             boop.activate();
+                        //                         }
+                        //                     }
+
+                        //                     Rectangle {
+                        //                         anchors.fill: parent
+                        //                         radius: 12
+                        //                         color: boop.ListView.isCurrentItem ? Color.palette().surface0 : "transparent"
+
+                        //                         Row {
+                        //                             anchors.fill: parent
+                        //                             anchors.margins: 12
+                        //                             spacing: 12
+
+                        //                             Text {
+                        //                                 anchors.verticalCenter: parent.verticalCenter
+                        //                                 text: boop.model.icon
+                        //                                 color: Color.palette().text
+                        //                                 font.pixelSize: 30
+                        //                             }
+
+                        //                             Column {
+                        //                                 spacing: 2
+                        //                                 anchors.verticalCenter: parent.verticalCenter
+
+                        //                                 Text {
+                        //                                     text: boop.model.name
+                        //                                     font.pixelSize: 15
+                        //                                     color: Color.palette().text
+                        //                                 }
+
+                        //                                 Text {
+                        //                                     text: boop.model.desc
+                        //                                     font.pixelSize: 11
+                        //                                     color: Color.palette().subtext0
+                        //                                 }
+                        //                             }
+                        //                         }
+                        //                     }
+                        //                 }
+                        //             }
+
+                        //             // APP ROW
+                        //             DelegateChoice {
+
+                        //                 roleValue: "app"
+
+                        //                 Item {
+                        //                     id: boop2
+                        //                     width: listView.width
+                        //                     height: 48
+                        //                     required property var model
+                        //                     required property int index
+
+                        //                     Rectangle {
+                        //                         anchors.fill: parent
+                        //                         radius: 12
+                        //                         color: boop2.ListView.isCurrentItem ? Color.palette().surface0 : "transparent" // ListView.isCurrentItem
+
+                        //                         Row {
+                        //                             anchors.fill: parent
+                        //                             anchors.margins: 12
+                        //                             spacing: 12
+
+                        //                             Image {
+                        //                                 source: Quickshell.iconPath(boop2.model.desktopEntry.icon)
+                        //                                 width: 24
+                        //                                 height: 24
+                        //                                 visible: source !== ""
+                        //                             }
+
+                        //                             Column {
+                        //                                 spacing: 2
+
+                        //                                 Text {
+                        //                                     text: boop2.model.desktopEntry.name
+                        //                                     font.pixelSize: 15
+                        //                                     color: Color.palette().text
+                        //                                 }
+
+                        //                                 Text {
+                        //                                     text: boop2.model.desktopEntry.comment || boop2.model.desktopEntry.execString
+                        //                                     font.pixelSize: 11
+                        //                                     color: Color.palette().subtext0
+                        //                                 }
+                        //                             }
+                        //                         }
+
+                        //                         MouseArea {
+                        //                             id: mouse
+                        //                             anchors.fill: parent
+                        //                             hoverEnabled: true
+                        //                             onEntered: {
+                        //                                 listView.currentIndex = boop2.index;
+                        //                             }
+                        //                             onClicked: boop2.model.desktopEntry.launch()
+                        //                         }
+                        //                     }
+                        //                 }
+                        //             }
+                        //         }
+                        //     }
+                        // }
 
                         Rectangle {
                             id: searchBar
 
                             Layout.preferredHeight: 44
                             radius: height / 2
-                            color: "red"
+                            color: Color.palette().surface1
 
                             anchors {
                                 left: parent.left
@@ -262,13 +493,28 @@ Scope {
                                     Layout.fillWidth: true
                                     background: null
                                     placeholderText: "search..."
+                                    focus: true
+                                    color: Color.palette().subtext0
                                     font.pixelSize: 16
                                     cursorVisible: true
                                     selectByMouse: true
 
-                                    focus: true // Set initial focus for demonstration
+                                    // focus: true // Set initial focus for demonstration
 
-                                    //     // This block of code runs when the Escape key is pressed
+                                    Keys.onPressed: event => {
+                                        if (event.key === Qt.Key_Down) {
+                                            listView.incrementCurrentIndex();
+                                            event.accepted = true;
+                                        } else if (event.key === Qt.Key_Up) {
+                                            listView.decrementCurrentIndex();
+                                            event.accepted = true;
+                                        } else if (event.key === Qt.Key_Return) {
+                                            listView.forceActiveFocus();
+                                            listView.currentItem?.activate?.();
+                                            event.accepted = true;
+                                        }
+                                    }
+
                                     Keys.onEscapePressed: {
                                         field.text = "";
                                         root.show = false;
@@ -278,7 +524,7 @@ Scope {
                                 // Clear button
                                 MouseArea {
                                     visible: field.text.length > 0
-                                    Layout.alignment: Qt.AlignVCenter6
+                                    Layout.alignment: Qt.AlignVCenter
                                     width: 24
                                     height: 24
                                     cursorShape: Qt.PointingHandCursor
@@ -294,25 +540,6 @@ Scope {
                                 }
                             }
                         }
-
-                        // TextField {
-                        //     id: myTextInput
-                        //     Layout.fillWidth: true
-                        //     placeholderText: "Search..."
-                        //     // text: "Focus here and press Esc"
-                        //     focus: true // Set initial focus for demonstration
-
-                        //     // This block of code runs when the Escape key is pressed
-                        //     Keys.onEscapePressed: {
-                        //         console.log("Escape key pressed! Running custom code.");
-                        //         print("Test");
-                        //         myTextInput.text = ""
-                        //         root.show = false;
-                        //     }
-
-                        //     Keys.onEnterPressed: {}
-                        // }
-
                         Component.onCompleted: {
                             field.forceActiveFocus();
                         }

@@ -9,10 +9,17 @@ import "./notifications"
 import "./controlcenter"
 
 Scope {
-  // Shell
-  Bar {}
-  Desktop {}
-  Notifications {}
-  ControlCenter {}
-
+    id: shell
+    property ShellScreen mainMonitor: {
+        return Quickshell.screens.find(screen => screen.x == 0);
+    }
+    // Shell
+    Bar {
+        screen: shell.mainMonitor
+    }
+    Desktop {}
+    Notifications {
+        screen: shell.mainMonitor
+    }
+    ControlCenter {}
 }

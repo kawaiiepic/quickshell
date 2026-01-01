@@ -8,60 +8,52 @@ import "../colors"
 import "./components"
 import "../modules/niri"
 
-Scope {
-    id: root
+PanelWindow {
+    id: barWindow
+    color: Color.palette().base
 
-    Variants {
-        model: Quickshell.screens
+    anchors {
+        top: true
+        left: true
+        bottom: true
+    }
 
-        PanelWindow {
-            id: barWindow
-            required property var modelData
-            screen: modelData
-            color: Color.palette().base
+    implicitWidth: 30
 
-            anchors {
-                top: true
-                left: true
-                bottom: true
-            }
+    ColumnLayout {
+        anchors.right: parent.right
+        width: 22
+        height: parent.height
+        spacing: 8
 
-            implicitWidth: 30
-
-            ColumnLayout {
-                anchors.right: parent.right
-                width: 22
-                height: parent.height
-                spacing: 8
-
-                Launcher {
-                    Layout.topMargin: 5
-                }
-
-                Workspaces {}
-
-                Item {
-                    Layout.fillHeight: true
-                }
-
-                ActiveWindow {}
-
-                Item {
-                    Layout.fillHeight: true
-                }
-
-                SystemTray {}
-
-                Clock {}
-
-                Status {}
-
-                Power {
-                    Layout.bottomMargin: 5
-                }
-
-                //
-            }
+        Launcher {
+            Layout.topMargin: 5
         }
+
+        Workspaces {}
+
+        Item {
+            Layout.fillHeight: true
+        }
+
+        ActiveWindow {}
+
+        Item {
+            Layout.fillHeight: true
+        }
+
+        SystemTray {}
+
+        Clock {}
+
+        Status {}
+
+        Power {
+            Layout.bottomMargin: 5
+        }
+    }
+
+    Component.onCompleted: {
+        console.log("Quickshell config path:", Quickshell.shellPath("assets/wallpapers/static"))
     }
 }

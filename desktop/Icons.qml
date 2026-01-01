@@ -10,6 +10,7 @@ import QtCore
 import QtQml
 import QtQuick.Controls
 import "../colors"
+import "../services"
 
 Scope {
     id: desktopIcons
@@ -51,7 +52,7 @@ Scope {
                         width: 500
 
                         Text {
-                            text: root.wallpaperSrc
+                            text: WallpaperManager.currentWallpaper.name
                             opacity: 0.8
                             horizontalAlignment: Text.AlignHCenter // Center horizontally
                             verticalAlignment: Text.AlignVCenter   // Center vertically
@@ -118,8 +119,8 @@ Scope {
                     id: iconGrid
                     anchors.fill: parent
 
-                    cellWidth: 96
-                    cellHeight: 96
+                    cellWidth: 90
+                    cellHeight: 90
 
                     model: desktopFolder
 
@@ -168,11 +169,18 @@ Scope {
                                     return item.modelData.fileName;
                                 }
                             }
+                            ClippingRectangle {
+                                id: clipRec
+                                color: "transparent"
+                                implicitHeight: 38
+                                implicitWidth: 38
+                                radius: 12
 
-                            IconImage {
-                                width: 48
-                                height: 48
-                                source: desktopSuffix.iconForItem(item.modelData)
+                                IconImage {
+                                    width: clipRec.implicitWidth
+                                    height: clipRec.implicitHeight
+                                    source: desktopSuffix.iconForItem(item.modelData)
+                                }
                             }
 
                             Text {
@@ -181,12 +189,16 @@ Scope {
                                 text: name
                                 ToolTip.visible: _mouseArea.containsMouse
                                 ToolTip.text: name
-                                font.pixelSize: 12
+                                font.pixelSize: 10
                                 elide: Text.ElideRight
                                 wrapMode: Text.Wrap
                                 maximumLineCount: 2
                                 horizontalAlignment: Text.AlignHCenter
-                                color: "black"
+                                color: Color.palette().text
+
+                                style: Text.Raised
+                                styleColor: Color.palette().crust  // semi-transparent black outline
+
 
                                 MouseArea {
                                     id: _mouseArea

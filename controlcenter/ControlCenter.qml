@@ -4,6 +4,6 @@ import QtQuick // for Text
 Scope {
     id: root
 
-    // TopControl {}
+    TopControl {}
     BottomControl {}
 }

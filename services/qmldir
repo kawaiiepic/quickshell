@@ -1,2 +1,3 @@
 module qs.services
 singleton Players Players.qml
+singleton WallpaperManager WallpaperManager.qml

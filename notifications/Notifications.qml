@@ -7,52 +7,72 @@ import QtQuick.Layouts
 import Quickshell.Wayland
 import QtQml
 import QtQuick.Controls
+import Quickshell.Widgets
+import QtQuick.Effects
 import "../colors"
 
-Scope {
+PanelWindow {
     id: notifications
+    required property var modelData
 
     property ListModel popupNotificationModel: ListModel {}
 
     property NotificationServer notificationServer: NotificationServer {
+        bodyHyperlinksSupported: true
+        imageSupported: true
+        actionsSupported: true
+        bodyImagesSupported: true
+        inlineReplySupported: true
+        actionIconsSupported: true
+        bodyMarkupSupported: true
+        persistenceSupported: true
+
         onNotification: notification => {
-            console.log(notification.expireTimeout);  // Log the app name for debugging
 
             // Convert the incoming notification to a ListElement
             notifications.popupNotificationModel.append({
                 appName: notification.appName,
-                message: notification.body || "No message",
+                summary: notification.summary,
+                body: notification.body || "No message",
+                appIcon: notification.appIcon,
+                image: notification.image,
                 timestamp: notification.time || new Date().toLocaleString(),
                 expire: notification.expireTimeout > 0 ? notification.expireTimeout : 5
             });
 
-            console.log(notifications.popupNotificationModel.count); // Check how many notifications are in the model
+            console.log(notification.image); // Check how many notifications are in the model
         }
     }
 
-    Variants {
-        model: Quickshell.screens
+    screen: modelData
+    // mask: Region {}
+    visible: repeater.count > 0
+    color: "transparent"
+    WlrLayershell.layer: WlrLayer.Top
+    exclusionMode: ExclusionMode.Normal
+    anchors {
+        top: true
+        // bottom: true
+        right: true
+    }
 
-        PanelWindow {
-            id: rootNotification
-            required property var modelData
+    implicitWidth: control.width
+    implicitHeight: control.height
+    Rectangle {
+        width: control.implicitWidth
+        height: control.implicitHeight
 
-            screen: modelData
-            mask: Region {}
-            color: "transparent"
-            WlrLayershell.layer: WlrLayer.Top
-            exclusionMode: ExclusionMode.Normal
-            anchors {
-                top: true
-                bottom: true
-                right: true
-            }
+        color: Color.palette().base
+        radius: 20
 
-            implicitWidth: 300
+        Control {
+            id: control
+            padding: 10
 
-            ColumnLayout {
+            contentItem: ColumnLayout {
+                id: column
                 spacing: 5
-                width: 200
+                width: 500
                 height: 20
 
                 Repeater {
@@ -60,50 +80,167 @@ Scope {
                     model: notifications.popupNotificationModel
                     delegate: Rectangle {
                         id: noti
-                        width: parent.width
-                        height: 50
-                        color: "pink"
-                        border.color: "blue"
-                        radius: 10
                         required property var modelData
+                        required property int index
 
-                        Timer {
-                            // 1000 milliseconds is 1 second
-                            interval: 1000
+                        property bool paused: false
+                        property real elapsed: 0        // milliseconds
+                        property real duration: noti.modelData.expire * 1000
 
-                            // start the timer immediately
-                            running: true
+                        width: 260
+                        implicitHeight: content.implicitHeight + 16
 
-                            // run the timer again when it ends
-                            repeat: true
+                        radius: 14
+                        color: Color.palette().surface0
+                        border.color: Color.palette().crust
+                        border.width: 1
 
-                            // when the timer is triggered, set the running property of the
-                            // process to true, which reruns it if stopped.
-                            onTriggered: {
-                                progressBar.value = barTimer.elapsed() / noti.modelData.expire;
+                        opacity: 0
+
+                        function removeSelf() {
+                            for (var i = 0; i < notifications.popupNotificationModel.count; i++) {
+                                var item = notifications.popupNotificationModel.get(i);
+                                if (item.timestamp === noti.modelData.timestamp) { // unique identifier
+                                    notifications.popupNotificationModel.remove(i, 1);  // stop after removing one item
+                                    break;
+                                }
                             }
                         }
 
-                        ElapsedTimer {
-                            id: barTimer
+                        MouseArea {
+                            id: hoverMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+
+                            onEntered: noti.paused = true
+                            onExited: noti.paused = false
+                        }
+
+                        // Entrance animation
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: 180
+                            }
+                        }
+                        Behavior on y {
+                            NumberAnimation {
+                                duration: 220
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+
+                        Component.onCompleted: {
+                            opacity = 1;
+                            y = 0;
+                        }
+
+                        Timer {
+                            interval: 16    // ~60fps
+                            running: true
+                            repeat: true
+
+                            onTriggered: {
+                                if (!noti.paused) {
+                                    noti.elapsed += interval;
+                                    progressBar.value = noti.elapsed / noti.duration;
+
+                                    if (progressBar.value >= 1.0) {
+                                        fadeOut.start();
+                                    }
+                                }
+                            }
+                        }
+
+                        SequentialAnimation {
+                            id: fadeOut
+                            PropertyAnimation {
+                                target: noti
+                                property: "opacity"
+                                to: 0
+                                duration: 160
+                            }
+                            ScriptAction {
+                                script: noti.removeSelf()
+                            }
                         }
 
                         ColumnLayout {
+                            id: content
+                            anchors.fill: parent
+                            anchors.margins: 12
+                            spacing: 2
 
-                            Text {
-                                text: noti.modelData.message  // Display the message from the notification object
-                                color: "black"
-                                font.pixelSize: 14
+                            RowLayout {
+                                spacing: 10
+                                Layout.fillWidth: true
+
+                                // App icon
+                                Rectangle {
+                                    implicitWidth: 32
+                                    implicitHeight: 32
+                                    radius: 8
+                                    color: Color.palette().surface1
+
+                                    IconImage {
+                                        id: sourceImage
+                                        anchors.centerIn: parent
+                                        width: 24
+                                        height: 24
+                                        source: Quickshell.iconPath(noti.modelData.appIcon)
+                                    }
+
+                                    MultiEffect {
+                                        source: sourceImage
+                                        anchors.fill: sourceImage
+                                        colorization: 1
+                                        brightness: 1
+                                        colorizationColor: "white"
+                                    }
+                                }
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+
+                                    Text {
+                                        text: noti.modelData.summary
+                                        font.pixelSize: 14
+                                        font.weight: Font.Medium
+                                        color: Color.palette().text
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+
+                                    Text {
+                                        text: noti.modelData.body
+                                        font.pixelSize: 12
+                                        color: Color.palette().subtext0
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                        maximumLineCount: 3
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                            }
+
+                            Image {
+                                Layout.fillWidth: true
+                                source: noti.modelData.image
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        Qt.openUrlExternally(noti.modelData.image.replace("image://icon/", ""));
+                                    }
+                                }
                             }
 
                             ProgressBar {
                                 id: progressBar
-                                value: barTimer.elapsed()
-                                onValueChanged: {
-                                    if (value >= 1.0) {
-                                        notifications.popupNotificationModel.remove(noti.modelData);
-                                    }
-                                }
+                                Layout.fillWidth: true
+
+                                implicitHeight: 3
+                                value: 0
                             }
                         }
                     }
