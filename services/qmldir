@@ -1,0 +1,10 @@
+singleton Players Players.qml
+singleton WallpaperManager WallpaperManager.qml
+singleton NotificationManager NotificationManager.qml
+singleton Niri Niri.qml
+singleton Sound Sound.qml
+singleton Cava Cava.qml
+singleton Paths Paths.qml
+singleton AI AI.qml
+singleton GlobalData GlobalData.qml
+singleton ShellSettings ShellSettings.qml
