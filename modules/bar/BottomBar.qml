@@ -3,6 +3,11 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import Quickshell.Widgets
+import QtCore
+
+import "../../ui"
+import "../../theme"
 
 import "../../services"
 
@@ -22,7 +27,7 @@ ShellRoot {
         }
 
         implicitHeight: 55
-        implicitWidth: 300
+        implicitWidth: dockContent.implicitWidth
         color: "transparent"
 
         exclusionMode: ExclusionMode.Ignore
@@ -50,6 +55,8 @@ ShellRoot {
         Item {
             id: dockContent
             anchors.fill: parent
+
+            implicitWidth: rect.width
 
             // start collapsed/invisible before animation runs
             state: "hidden"
@@ -189,7 +196,9 @@ ShellRoot {
             // ── main pill ─────────────────────────────────────────────────
             Rectangle {
                 id: rect
-                anchors.fill: parent
+                // anchors.fill: parent
+                implicitWidth: row.width + 20
+                implicitHeight: parent.height
                 radius: 18
                 color: "#0a0b12"
                 opacity: 0.95
@@ -197,103 +206,161 @@ ShellRoot {
                 border.width: 0
 
                 RowLayout {
+                    id: row
+                    Layout.alignment: Qt.AlignHCenter
+
                     anchors {
-                        fill: parent
+                        centerIn: parent
+                        // fill: parent
                         leftMargin: 20
                         rightMargin: 20
                     }
                     spacing: 0
+                    Repeater {
+                        model: [
+                            {
+                                icon: "",
+                                label: "terminal",
+                                clicked: () => {
+                                    GlobalData.showAppMenu = !GlobalData.showAppMenu;
+                                }
+                            }
+                            // {
+                            //     icon: "\uf120",
+                            //     label: "terminal"
+                            // },
+                            // {
+                            //     icon: "\uf0ac",
+                            //     label: "browser"
+                            // },
+                            // {
+                            //     icon: "\uf07b",
+                            //     label: "files"
+                            // },
+                            // {
+                            //     icon: "\uf001",
+                            //     label: "music"
+                            // },
+                            // {
+                            //     icon: "\uf013",
+                            //     label: "settings"
+                            // },
+                            // {
+                            //     icon: "\uf011",
+                            //     label: "power"
+                            // },
+                            ,
+                        ]
 
-                    RowLayout {
-                        spacing: 2
-                        Layout.alignment: Qt.AlignHCenter
+                        delegate: Rectangle {
+                            id: appBtn
+                            width: 38
+                            height: 32
+                            radius: 8
+                            color: hov.hovered ? "#1a0828" : "transparent"
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 120
+                                }
+                            }
 
-                        Repeater {
-                            model: [
-                                {
-                                    icon: "",
-                                    label: "terminal",
-                                    clicked: () => {
-                                        print("Clicked terminal");
-                                        print("Before:" + GlobalData.showAppMenu);
-                                        GlobalData.showAppMenu = !GlobalData.showAppMenu;
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    modelData.clicked();
+                                }
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData.icon
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 16
+                                color: "#5a4070"
+                            }
+
+                            HoverHandler {
+                                id: hov
+                            }
+                        }
+                    }
+
+                    Repeater {
+
+                        model: ASettings.apps.favouriteApps
+
+                        delegate: Rectangle {
+                            id: appBtn2
+
+                            required property var modelData
+
+                            property var entry: DesktopEntries.applications.values.find(function (app) {
+                                return app.name == modelData;
+                            })
+
+                            Component.onCompleted: {
+                                print(Quickshell.iconPath(appBtn2.entry.icon));
+                            }
+
+                            ThemedMenu {
+                                id: appContextMenu
+                                width: 20
+                                Action {
+                                    text: qsTr("Favourite App")
+                                    icon.name: "add"
+                                    onTriggered: {
+                                        ASettings.apps.favouriteApps = [...ASettings.apps.favouriteApps, appRow.model.desktopEntry.name];
+                                        root.requestClose();
                                     }
+                                }
 
-                                },
-                                {
-                                    icon: "\uf120",
-                                    label: "terminal",
+                                Action {
+                                    text: qsTr("Add to Desktop")
+                                    icon.name: "add"
+                                    onTriggered: console.log("add-to-desktop")
+                                }
+                            }
 
-                                },
-                                {
-                                    icon: "\uf0ac",
-                                    label: "browser",
+                            width: 38
+                            height: 32
+                            radius: 8
+                            color: appHov.hovered ? "#1a0828" : "transparent"
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 120
+                                }
+                            }
 
-                                },
-                                {
-                                    icon: "\uf07b",
-                                    label: "files",
+                            MouseArea {
+                                anchors.fill: parent
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
 
-                                },
-                                {
-                                    icon: "\uf001",
-                                    label: "music",
-
-                                },
-                                {
-                                    icon: "\uf013",
-                                    label: "settings",
-
-                                },
-                                {
-                                    icon: "\uf011",
-                                    label: "power",
-                                },
-                            ]
-
-                            delegate: Rectangle {
-                                id: appBtn
-                                width: 38
-                                height: 32
-                                radius: 8
-                                color: hov.hovered ? "#1a0828" : "transparent"
-                                Behavior on color {
-                                    ColorAnimation {
-                                        duration: 120
+                                onClicked: mouse => {
+                                    if (mouse.button === Qt.LeftButton) {
+                                        entry.execute();
+                                    } else {
+                                        appContextMenu.popup();
                                     }
                                 }
+                            }
 
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        modelData.clicked();
-                                    }
-                                }
+                            IconImage {
+                                source: Quickshell.iconPath(appBtn2.entry.icon)
+                                width: 20
+                                height: 20
+                                anchors.centerIn: parent
+                            }
 
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: modelData.icon
-                                    font.family: "JetBrainsMono Nerd Font"
-                                    font.pixelSize: 16
-                                    color: "#5a4070"
-                                }
+                            // Text {
+                            //     anchors.centerIn: parent
+                            //     text: appBtn2.entry.name
+                            //     font.family: "JetBrainsMono Nerd Font"
+                            //     font.pixelSize: 9
+                            //     color: "#5a4070"
+                            // }
 
-                                // Rectangle {
-                                //     visible: modelData.active
-                                //     anchors {
-                                //         bottom: parent.bottom
-                                //         bottomMargin: 3
-                                //         horizontalCenter: parent.horizontalCenter
-                                //     }
-                                //     width: 14
-                                //     height: 2
-                                //     radius: 1
-                                //     color: modelData.activeColor
-                                // }
-
-                                HoverHandler {
-                                    id: hov
-                                }
+                            HoverHandler {
+                                id: appHov
                             }
                         }
                     }

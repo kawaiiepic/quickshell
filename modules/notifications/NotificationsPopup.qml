@@ -17,7 +17,6 @@ BaseOverlay {
     id: notifications
 
     visible: NotificationManager.popupNotifications.count > 0
-    color: "red"
 
     dismissable: false
 
@@ -56,7 +55,17 @@ BaseOverlay {
                 delegate: Flickable {
                     id: root
 
-                    required property Notification modelData
+                    required property var model
+                    required property int id
+                    required property string summary
+                    required property string body
+                    required property var expireTimeout
+                    required property var image
+                    required property var hints
+                    required property var appIcon
+                    required property var appName
+                    required property var actions
+
                     required property int index
 
                     implicitWidth: noti.width
@@ -97,7 +106,7 @@ BaseOverlay {
                     function removeSelf() {
                         for (var i = 0; i < NotificationManager.popupNotifications.count; i++) {
                             var item = NotificationManager.popupNotifications.get(i);
-                            if (item.id === root.modelData.id) { // unique identifier
+                            if (item.id === root.id) { // unique identifier
                                 NotificationManager.popupNotifications.remove(i, 1);  // stop after removing one item
                                 break;
                             }
@@ -107,9 +116,9 @@ BaseOverlay {
                     Rectangle {
                         id: noti
                         property real elapsed: 0
-                        property real duration: (root.modelData.expireTimeout == -1 ? 8 : root.modelData.expireTimeout) * 1000
-                        property bool preview: root.modelData.hints["preview"] ? true : false
-                        property bool isExpanded: root.modelData.hints["preview"] ? true : false
+                        property real duration: (root.expireTimeout == -1 ? 8 : root.expireTimeout) * 1000
+                        property bool preview: root.hints["preview"] ? true : false
+                        property bool isExpanded: root.hints["preview"] ? true : false
                         property int hoverCount: 0
                         property bool paused: hoverCount > 0
 
@@ -124,7 +133,6 @@ BaseOverlay {
                         opacity: 0
 
                         Component.onCompleted: {
-                            print(root.modelData.summary)
                             opacity = 1;
                             y = 0;
                         }
@@ -205,7 +213,7 @@ BaseOverlay {
                                         anchors.centerIn: parent
                                         width: 24
                                         height: 24
-                                        source: noti.preview ? Quickshell.iconPath(root.modelData.appIcon, "desktop") : (root.modelData.image && root.modelData.image.length > 0 ? root.modelData.image : Quickshell.iconPath(root.modelData.appIcon, "desktop"))
+                                        source: noti.preview ? Quickshell.iconPath(root.appIcon, "desktop") : (root.image && root.image.length > 0 ? root.image : Quickshell.iconPath(root.appIcon, "desktop"))
                                     }
                                 }
 
@@ -216,7 +224,7 @@ BaseOverlay {
                                     RowLayout {
 
                                         Text {
-                                            text: noti.isExpanded ? root.modelData.appName : root.modelData.summary
+                                            text: noti.isExpanded ? root.appName : root.summary
                                             font.pixelSize: 14
                                             font.weight: Font.Light
                                             color: noti.isExpanded ? Colors.palette().subtext0 : Colors.palette().text
@@ -250,7 +258,7 @@ BaseOverlay {
 
                                     Text {
                                         visible: noti.isExpanded
-                                        text: root.modelData.summary
+                                        text: root.summary
                                         font.pixelSize: 14
                                         font.weight: Font.Medium
                                         color: Colors.palette().text
@@ -259,7 +267,7 @@ BaseOverlay {
                                     }
 
                                     Text {
-                                        text: root.modelData.body
+                                        text: root.body
                                         font.pixelSize: 12
                                         color: Colors.palette().subtext0
                                         wrapMode: Text.Wrap
@@ -278,12 +286,12 @@ BaseOverlay {
                             }
 
                             RowLayout {
-                                visible: root.modelData.actions.count > 0
+                                visible: root.actions.count > 0
                                 Layout.alignment: Qt.AlignCenter
                                 spacing: 8
                                 Repeater {
                                     id: action
-                                    model: root.modelData.actions
+                                    model: root.actions
 
                                     delegate: Button {
                                         id: btn
@@ -306,7 +314,7 @@ BaseOverlay {
 
                                         onClicked: {
                                             print("Clicked: " + modelData.text);
-                                            NotificationManager.invokeAction(root.modelData.id, modelData.identifier);
+                                            NotificationManager.invokeAction(root.id, modelData.identifier);
                                             fadeOut.start();
                                         }
 
@@ -338,7 +346,7 @@ BaseOverlay {
                                 AnimatedImage {
                                     anchors.fill: parent
                                     fillMode: Image.PreserveAspectCrop
-                                    source: root.modelData.image.replace("image://icon/", "")
+                                    source: root.image.replace("image://icon/", "")
                                     onStatusChanged: playing = (status == AnimatedImage.Ready)
                                     sourceSize.width: parent.width
                                     sourceSize.height: parent.height
@@ -347,7 +355,7 @@ BaseOverlay {
                                 MouseArea {
                                     anchors.fill: parent
                                     onClicked: {
-                                        Qt.openUrlExternally(root.modelData.image.replace("image://icon/", ""));
+                                        Qt.openUrlExternally(root.image.replace("image://icon/", ""));
                                     }
                                 }
                             }
@@ -365,5 +373,4 @@ BaseOverlay {
             }
         }
     }
-
 }

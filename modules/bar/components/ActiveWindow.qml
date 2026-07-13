@@ -12,13 +12,41 @@ Rectangle {
 
     property ShellScreen screen
 
-    implicitWidth: parent.width
-    implicitHeight: childrenRect.height
+    property bool vertical: true
+
+    implicitWidth: root.vertical ? parent.width : 200
+    implicitHeight: root.vertical ? childrenRect.height : parent.height
 
     color: "transparent"
 
+    Row {
+        visible: !root.vertical
+
+        anchors.verticalCenter: parent.verticalCenter
+
+        IconImage {
+            implicitWidth: 16
+            implicitHeight: 16
+            Layout.alignment: Qt.AlignHCenter
+            source: Niri.focusedWindow?.iconPath ? "file://" + Niri.focusedWindow.iconPath : Quickshell.iconPath("desktop")
+            Layout.topMargin: 8
+        }
+
+        Text {
+            id: label
+            color: Colors.palette().text
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            text: Niri.focusedWindow ? Niri.focusedWindow.title : "Desktop"
+            elide: Text.ElideRight
+        }
+    }
+
     ColumnLayout {
         id: layout
+        
+        visible: root.vertical
+
         spacing: 8
 
         BasePopup {
@@ -67,10 +95,10 @@ Rectangle {
             property int maxText: Math.min(Math.max(label.implicitWidth + 1, 50), 300)
 
             implicitHeight: maxText
-            implicitWidth: label.implicitHeight
+            implicitWidth: label2.implicitHeight
 
             Text {
-                id: label
+                id: label2
                 anchors.centerIn: parent
                 color: Colors.palette().text
                 horizontalAlignment: Text.AlignHCenter

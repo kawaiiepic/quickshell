@@ -21,14 +21,10 @@ Rectangle {
     Column {
         id: column
         spacing: 4
-        topPadding: 5
-        bottomPadding: 5
+        topPadding: 4
+        bottomPadding: 4
         Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
         anchors.horizontalCenter: parent.horizontalCenter
-
-        height: childrenRect.height != 0 ? childrenRect.height : 25
-
-        // height: childrenRect.height
 
         Repeater {
             model: SystemTray.items

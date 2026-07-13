@@ -13,9 +13,9 @@ import Quickshell
 import QtQuick
 
 Scope {
-    // Bar {}
-    SingleBar {}
-    Corners {}
+    Bar {}
+    // SingleBar {}
+    // Corners {}
     BottomBar {}
     BottomControl {}
     Desktop {}

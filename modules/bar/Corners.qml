@@ -8,6 +8,8 @@ import "../../theme"
 
 PanelWindow {
     id: barWindow
+
+    WlrLayershell.namespace: "quickshell-corners"
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
     exclusionMode: ExclusionMode.Ignore

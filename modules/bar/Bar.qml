@@ -15,7 +15,9 @@ Scope {
             required property var modelData
             screen: modelData
             color: "transparent"
-            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.layer: ToplevelManager.activeToplevel.maximized ? WlrLayer.Bottom : WlrLayer.Top
+
+            aboveWindows: false
 
             anchors {
                 top: true
@@ -127,6 +129,11 @@ Scope {
                         ctx.fill();
                     }
                 }
+            }
+
+            Component.onCompleted: {
+                
+                print(ToplevelManager.activeToplevel.appId)
             }
         }
     }

@@ -21,7 +21,7 @@ Rectangle {
 
     Loader {
         id: loader
-        sourceComponent: ShellSettings.detailedWorkspaces ? detailed : simple
+        sourceComponent: ASettings.settings.detailedWorkspaces ? detailed : simple
         height: 200
         width: 200
     }

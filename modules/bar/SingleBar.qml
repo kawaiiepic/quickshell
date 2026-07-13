@@ -7,36 +7,64 @@ import "./components"
 import "../../theme"
 import "../../services"
 
-PanelWindow {
+Variants {
+    model: Quickshell.screens
 
-    Component.onCompleted: {
-        Niri;
-    }
+    PanelWindow {
+        id: window
 
-    anchors {
-        top: true
-    }
+        required property var modelData
 
-    margins {
-        top: 10
-    }
+        WlrLayershell.namespace: "quickshell-bar"
 
-    implicitWidth: 100
-    implicitHeight: 30
+        visible: !ToplevelManager.activeToplevel.maximized
 
-    color: "transparent"
+        Component.onCompleted: {
+            Niri;
+        }
 
-    Rectangle {
-        id: bar
-        width: parent.width
-        height: parent.height
-        color: Colors.transparent(Colors.palette().base, 0.9)
-        radius: 18
+        anchors {
+            top: true
+        }
 
-        Row {
-            anchors.centerIn: parent
-            Clock {
-                vertical: false
+        margins {
+            top: 10
+        }
+
+        implicitWidth: bar.width
+        implicitHeight: 30
+
+        color: "transparent"
+
+        Rectangle {
+            id: bar
+            width: row.width + 20
+            height: parent.height
+            color: Colors.transparent(Colors.palette().base, 0.9)
+            radius: 18
+
+            HoverHandler {
+                id: hover
+            }
+
+            Row {
+                id: row
+                spacing: 8
+                anchors.centerIn: parent
+
+                Launcher {
+                    visible: hover.hovered
+                }
+
+                ActiveWindow {
+                    visible: hover.hovered
+                    vertical: false
+                    screen: window.modelData
+                }
+
+                Clock {
+                    vertical: false
+                }
             }
         }
     }

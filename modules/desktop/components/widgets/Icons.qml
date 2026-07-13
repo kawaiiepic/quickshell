@@ -9,6 +9,7 @@ import QtCore
 import QtQml
 import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
+import Quickshell.Wayland
 
 import "../../../../ui"
 import "../../../../theme"
@@ -22,6 +23,10 @@ Scope {
 
         PanelWindow {
             required property var modelData
+
+            WlrLayershell.namespace: "quickshell-icons"
+            WlrLayershell.layer: WlrLayer.Background
+
             screen: modelData
             color: "transparent"
 
@@ -64,7 +69,7 @@ Scope {
                             bottomPadding: 5
                             elide: Text.ElideRight
                             ToolTip.visible: tooltipHover.hovered
-                            ToolTip.text: WallpaperManager.settings.wallpaperName
+                            ToolTip.text: WallpaperManager.settings.wallpaperPath
 
                             HoverHandler {
                                 id: tooltipHover

@@ -7,4 +7,4 @@ singleton Cava Cava.qml
 singleton Paths Paths.qml
 singleton AI AI.qml
 singleton GlobalData GlobalData.qml
-singleton ShellSettings ShellSettings.qml
+singleton ASettings Settings.qml

@@ -10,7 +10,9 @@ Singleton {
 
     property Process process: Process {}
 
-    property ListModel popupNotifications: ListModel {}
+    property ListModel popupNotifications: ListModel {
+        id: popup
+    }
     property ListModel historyNotifications: ListModel {}
     property var notifications: ({})
 
@@ -30,22 +32,38 @@ Singleton {
         bodyMarkupSupported: true
         persistenceSupported: true
 
-        onNotification: notification => {
-            notification.tracked = true;
+        onNotification: n => {
+            n.tracked = true;
 
-            print("Notification:", notification.id);
-            print("Notifcation title:", notification.summary)
+            var count = root.popupNotifications.count;
 
-            // root.notifications[notification.id] = notification;
+            var item = {
+                id: n.id,
+                summary: n.summary,
+                body: n.body,
+                appName: n.appName,
+                appIcon: n.appIcon,
+                image: n.image,
+                actions: n.actions,
+                expireTimeout: n.expireTimeout,
+                hints: n.hints
+            };
+
+            n.summaryChanged.connect(updateNot);
+            n.bodyChanged.connect(updateNot);
+
+            function updateNot() {
+                item.summary = n.summary;
+                item.body = n.body;
+                root.popupNotifications.set(root.popupNotifications.count, item);
+                root.historyNotifications.set(root.historyNotifications.count, item);
+            }
 
             if (!root.doNotDisturb) {
-
-                if (!notification.lastGeneration) {
-                    root.popupNotifications.append(notification);
+                if (!n.lastGeneration) {
+                    root.popupNotifications.append(item);
                 }
-
-                root.historyNotifications.append(notification);
-
+                root.historyNotifications.append(item);
                 root.playNotificationSound();
             }
         }

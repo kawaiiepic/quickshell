@@ -9,6 +9,7 @@ ShellRoot {
         model: Quickshell.screens
 
         PanelWindow {
+            WlrLayershell.namespace: "quickshell-activatelinux"
             required property var modelData
             screen: modelData
             mask: Region {}

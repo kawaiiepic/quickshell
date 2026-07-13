@@ -62,14 +62,20 @@ Scope {
     }
 
     PanelWindow {
-        id: clickable
-        color: "red"
+        id: main
 
-        visible: root.visible && root.dismissable
+        color: "transparent"
 
-        // WlrLayershell.layer: WlrLayer.Overlay
-        // exclusionMode: ExclusionMode.Ignore
+        visible: root.visible
 
+        mask: root.dismissable ? null : noMask
+
+        Region {
+            id: noMask
+        }
+
+        WlrLayershell.layer: WlrLayer.Overlay
+        exclusionMode: ExclusionMode.Ignore
         focusable: root.dismissable
 
         anchors {
@@ -80,34 +86,24 @@ Scope {
         }
 
         Item {
-            id: focusRoot
-            focus: false
+            id: focusRoot2
 
             anchors.fill: parent
 
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    print("Clicked!!!");
-                    closeAnim.start();
+                    if (root.dismissable) {
+                        print("Clicked!!!");
+                        closeAnim.start();
+                    }
                 }
             }
             Keys.onEscapePressed: {
-                closeAnim.start();
+                if (root.dismissable)
+                    closeAnim.start();
             }
         }
-    }
-
-    PanelWindow {
-        id: main
-
-        color: "transparent"
-
-        visible: root.visible
-
-        WlrLayershell.layer: WlrLayer.Overlay
-        exclusionMode: ExclusionMode.Ignore
-        focusable: true
 
         Item {
             id: container

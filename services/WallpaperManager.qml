@@ -101,7 +101,7 @@ Singleton {
                 screenArrayString.push(screen.name);
             }
 
-            wallpaperEngineProcess.command = ["linux-wallpaperengine", "--fullscreen-pause-only-active", "--fullscreen-pause-ignore-appid", "kitty", "-v", "60", "--scaling", "fit", "--fps", "60", ...screenArrayString, "--bg", name];
+            wallpaperEngineProcess.command = ["linux-wallpaperengine", "--layer", "background", "--fullscreen-pause-only-active", "--fullscreen-pause-ignore-appid", "kitty", "-v", "60", "--scaling", "fit", "--fps", "60", ...screenArrayString, "--bg", name];
             wallpaperEngineProcess.running = true;
 
             process.command = ["notify-send", "-i", "camera", "-h", "string:image-path:" + clipPreview, "-h", "string:preview:true", "Wallpaper", "Wallpaper has been updated: \n" + name];
@@ -131,7 +131,7 @@ Singleton {
                 screenArrayString.push(screen.name);
             }
 
-            wallpaperEngineProcess.command = ["linux-wallpaperengine", "--fullscreen-pause-only-active", "--fullscreen-pause-ignore-appid", "kitty", "-v", "60", "--scaling", "fit", "--fps", "30", ...screenArrayString, "--bg", settings.wallpaperName];
+            wallpaperEngineProcess.command = ["linux-wallpaperengine", "--layer", "background", "--fullscreen-pause-only-active", "--fullscreen-pause-ignore-appid", "kitty", "-v", "60", "--scaling", "fit", "--fps", "30", ...screenArrayString, "--bg", settings.wallpaperName];
             wallpaperEngineProcess.running = true;
         }
     }

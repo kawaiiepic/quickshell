@@ -35,6 +35,20 @@
           inputs.qml-niri.packages.${system}.default
         ];
 
+        icy-shell = pkgs.symlinkJoin {
+          name = "icy-shell";
+
+          paths = [
+            (pkgs.writeShellScriptBin "icy-shell" ''
+              exec ${quickshelled}/bin/quickshell \
+                -p ${./.} \
+                "$@"
+            '')
+          ];
+        };
+
+        packages.default = icy-shell;
+
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             bash
@@ -46,6 +60,7 @@
 
             quickshelled
             pkgs.kdePackages.qtdeclarative
+            icy-shell
 
             uv
             pkg-config
@@ -61,7 +76,7 @@
         };
       in
       {
-        inherit devShells;
+        inherit devShells packages;
       }
     );
 }

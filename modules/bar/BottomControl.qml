@@ -9,6 +9,7 @@ import Quickshell.Widgets
 import Qt.labs.folderlistmodel
 import QtQml.Models
 import Quickshell.Hyprland
+import Quickshell.Io
 
 import "../../ui"
 import "../../theme"
@@ -24,6 +25,14 @@ BaseOverlay {
 
     onRequestClose: {
         GlobalData.showAppMenu = false;
+    }
+
+    IpcHandler {
+        target: "appMenu"
+
+        function toggleAppMenu(): void {
+            GlobalData.showAppMenu = !GlobalData.showAppMenu;
+        }
     }
 
     anchors {
@@ -380,6 +389,15 @@ BaseOverlay {
                                             ThemedMenu {
                                                 id: appContextMenu
                                                 width: 200
+                                                Action {
+                                                    text: qsTr("Favourite App")
+                                                    icon.name: "add"
+                                                    onTriggered: {
+                                                        ASettings.apps.favouriteApps = [...ASettings.apps.favouriteApps, appRow.model.desktopEntry.name];
+                                                        root.requestClose();
+                                                    }
+                                                }
+
                                                 Action {
                                                     text: qsTr("Add to Desktop")
                                                     icon.name: "add"
