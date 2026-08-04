@@ -6,18 +6,20 @@ import Quickshell.Wayland
 import "./components"
 import "../../theme"
 
-Scope {
-    Variants {
-        model: Quickshell.screens
+Variants {
+    model: Quickshell.screens
+
+    Scope {
+        id: scope
+        required property var modelData
 
         PanelWindow {
             id: barWindow
-            required property var modelData
-            screen: modelData
+            screen: scope.modelData
             color: "transparent"
-            WlrLayershell.layer: ToplevelManager.activeToplevel.maximized ? WlrLayer.Bottom : WlrLayer.Top
+            // WlrLayershell.layer: ToplevelManager.activeToplevel.maximized ? WlrLayer.Bottom : WlrLayer.Top
 
-            aboveWindows: false
+            aboveWindows: true
 
             anchors {
                 top: true
@@ -130,21 +132,12 @@ Scope {
                     }
                 }
             }
-
-            Component.onCompleted: {
-                
-                print(ToplevelManager.activeToplevel.appId)
-            }
         }
-    }
-
-    Variants {
-        model: Quickshell.screens
 
         PanelWindow {
             id: window2
-            required property var modelData
-            screen: modelData
+
+            screen: scope.modelData
 
             color: "transparent"
             WlrLayershell.namespace: "quickshell-blur-test"
@@ -177,7 +170,7 @@ Scope {
                     }
 
                     NiriWorkspace {
-                        screen: window2.modelData
+                        screen: scope.modelData
                     }
 
                     Item {
@@ -185,7 +178,7 @@ Scope {
                     }
 
                     ActiveWindow {
-                        screen: window2.modelData
+                        screen: scope.modelData
                     }
 
                     Item {
@@ -193,15 +186,15 @@ Scope {
                     }
 
                     SystemTray {
-                        screen: window2.modelData
+                        screen: scope.modelData
                     }
 
                     Clock {
-                        screen: window2.modelData
+                        screen: scope.modelData
                     }
 
                     Status {
-                        screen: window2.modelData
+                        screen: scope.modelData
                     }
 
                     Power {

@@ -16,8 +16,11 @@ Rectangle {
 
     default property alias contentChildren: inner.data
 
-    implicitWidth: inner.implicitWidth
-    implicitHeight: inner.implicitHeight
+    property int padding: 10
+    property int addedHeight: root.pos == "left" ? leftCorner.height * 2 : 0
+
+    implicitWidth: inner.implicitWidth + padding
+    implicitHeight: inner.implicitHeight + addedHeight + padding
 
     onShowChanged: {
         if (show) {
@@ -53,6 +56,8 @@ Rectangle {
 
         implicitHeight: inner.childrenRect.height
         implicitWidth: inner.childrenRect.width
+
+        // anchors.verticalCenter: parent.verticalCenter
 
         bottomLeftRadius: root.pos == "bottom" || root.pos == "bottom-right" || root.pos == "left" ? 0 : root.cornerRadius
         bottomRightRadius: root.pos == "right" || root.pos == "top-right" || root.pos == "bottom" || root.pos == "bottom-right" ? 0 : root.cornerRadius

@@ -45,6 +45,9 @@ Scope {
 
             dismissable: false
 
+            anchorRight: true
+            verticalCenter: true
+
             StyledRect {
                 parentWindow: parent
                 pos: "right"

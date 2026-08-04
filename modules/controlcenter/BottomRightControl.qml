@@ -17,7 +17,7 @@ Scope {
     property bool show: false
 
     Variants {
-        model: Quickshell.screens.filter(screen => screen.x == 0)
+        model: Quickshell.screens
 
         PanelWindow {
             id: hoverTrigger

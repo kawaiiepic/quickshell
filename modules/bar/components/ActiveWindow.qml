@@ -22,8 +22,6 @@ Rectangle {
     Row {
         visible: !root.vertical
 
-        anchors.verticalCenter: parent.verticalCenter
-
         IconImage {
             implicitWidth: 16
             implicitHeight: 16
@@ -44,7 +42,7 @@ Rectangle {
 
     ColumnLayout {
         id: layout
-        
+
         visible: root.vertical
 
         spacing: 8

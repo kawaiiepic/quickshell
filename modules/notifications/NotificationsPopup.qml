@@ -20,18 +20,10 @@ BaseOverlay {
 
     dismissable: false
 
-    anchors {
-        top: true
-        right: true
-    }
-
-    margins {
-        top: 5
-        right: 4
-    }
-
     implicitWidth: column.width
     implicitHeight: column.height
+
+    anchorRight: true
 
     StyledRect {
         parentWindow: parent
@@ -225,7 +217,7 @@ BaseOverlay {
 
                                         Text {
                                             text: noti.isExpanded ? root.appName : root.summary
-                                            font.pixelSize: 14
+                                            font.pixelSize: 11
                                             font.weight: Font.Light
                                             color: noti.isExpanded ? Colors.palette().subtext0 : Colors.palette().text
                                             elide: Text.ElideRight
@@ -259,7 +251,7 @@ BaseOverlay {
                                     Text {
                                         visible: noti.isExpanded
                                         text: root.summary
-                                        font.pixelSize: 14
+                                        font.pixelSize: 11
                                         font.weight: Font.Medium
                                         color: Colors.palette().text
                                         elide: Text.ElideRight
@@ -268,7 +260,7 @@ BaseOverlay {
 
                                     Text {
                                         text: root.body
-                                        font.pixelSize: 12
+                                        font.pixelSize: 11
                                         color: Colors.palette().subtext0
                                         wrapMode: Text.Wrap
                                         Layout.fillWidth: true

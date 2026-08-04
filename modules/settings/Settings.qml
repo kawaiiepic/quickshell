@@ -317,8 +317,8 @@ FloatingWindow {
                             label: "Detailed Workspace"
                             desc: "Whether the workspace should be simple or more detailed."
                             Switch {
-                                checked: ShellSettings.detailedWorkspaces
-                                onClicked: ShellSettings.detailedWorkspaces = checked
+                                checked: ASettings.settings.detailedWorkspaces
+                                onClicked: ASettings.settings.detailedWorkspaces = checked
 
                             }
 

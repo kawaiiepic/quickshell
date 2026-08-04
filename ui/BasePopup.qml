@@ -126,17 +126,18 @@ PanelWindow {
         }
 
         contentItem: StyledRect {
+            id: style
             parentWindow: root
             show: root.show
             pos: "left"
             cornerSize: 26
-            implicitWidth: control.implicitWidth
-            implicitHeight: control.implicitHeight
+            // implicitWidth: control.implicitWidth
+            // implicitHeight: control.implicitHeight + 200
 
             Control {
                 id: control
                 // anchors.fill: parent
-                padding: 10
+                padding: 20
 
                 contentItem: ColumnLayout {
                     id: contentLayout

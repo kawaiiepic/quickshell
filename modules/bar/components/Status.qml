@@ -262,13 +262,21 @@ Rectangle {
                     Column {
 
                         Switch {
-                            checked: Bluetooth.defaultAdapter.discovering
-                            onToggled: Bluetooth.defaultAdapter.discovering = checked
+                            checked: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.discovering : false
+
+                            onToggled: {
+                                if (Bluetooth.defaultAdapter)
+                                    Bluetooth.defaultAdapter.discovering = checked;
+                            }
                         }
 
                         Switch {
-                            checked: Bluetooth.defaultAdapter.pairable
-                            onToggled: Bluetooth.defaultAdapter.pairable = checked
+                            checked: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.pairable : false
+
+                            onToggled: {
+                                if (Bluetooth.defaultAdapter)
+                                    Bluetooth.defaultAdapter.pairable = checked;
+                            }
                         }
 
                         ScrollView {

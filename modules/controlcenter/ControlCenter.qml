@@ -8,8 +8,15 @@ import "../../services"
 Scope {
     id: root
 
+    Variants {
+        model: Quickshell.screens
+
     PanelWindow {
         id: item
+
+        required property var modelData
+
+        screen: modelData
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
         anchors {
@@ -35,6 +42,9 @@ Scope {
     }
 
     PanelWindow {
+        required property var modelData
+
+        screen: modelData
         WlrLayershell.layer: WlrLayer.Top
         exclusionMode: ExclusionMode.Ignore
 
@@ -64,6 +74,9 @@ Scope {
     }
 
     PanelWindow {
+        required property var modelData
+
+        screen: modelData
         WlrLayershell.layer: WlrLayer.Top
         exclusionMode: ExclusionMode.Ignore
         anchors {
@@ -87,10 +100,11 @@ Scope {
 
                 onEntered: {
                     GlobalData.showDock = true;
-                    // overlayLoader.source = "BottomControl.qml";
                 }
             }
         }
+    }
+
     }
 
     Loader {

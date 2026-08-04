@@ -11,9 +11,16 @@ import "../../theme"
 
 import "../../services"
 
-ShellRoot {
+Variants {
+    model: Quickshell.screens
+
     PanelWindow {
         id: barWindow
+
+        required property var modelData
+
+        // we can then set the window's screen to the injected property
+        screen: modelData
 
         visible: GlobalData.showDock
 
@@ -298,10 +305,6 @@ ShellRoot {
                                 return app.name == modelData;
                             })
 
-                            Component.onCompleted: {
-                                print(Quickshell.iconPath(appBtn2.entry.icon));
-                            }
-
                             ThemedMenu {
                                 id: appContextMenu
                                 width: 20
@@ -345,7 +348,7 @@ ShellRoot {
                             }
 
                             IconImage {
-                                source: Quickshell.iconPath(appBtn2.entry.icon)
+                                source: appBtn2.entry ? Quickshell.iconPath(appBtn2.entry.icon, "desktop") : Quickshell.iconPath("desktop")
                                 width: 20
                                 height: 20
                                 anchors.centerIn: parent
