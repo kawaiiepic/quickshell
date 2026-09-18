@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell.Services.SystemTray
 import Quickshell
 import QtQuick.Controls
+import Quickshell.Widgets
 
 import "../../../ui"
 import "../../../theme"
@@ -114,7 +115,7 @@ Rectangle {
                     }
                 }
 
-                Image {
+                IconImage {
                     id: icon
                     width: 15
                     height: 15

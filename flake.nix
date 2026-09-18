@@ -35,16 +35,15 @@
           inputs.qml-niri.packages.${system}.default
         ];
 
-        icy-shell = pkgs.symlinkJoin {
+        icy-shell = pkgs.writeShellApplication {
           name = "icy-shell";
-
-          paths = [
-            (pkgs.writeShellScriptBin "icy-shell" ''
-              exec ${quickshelled}/bin/quickshell \
-                -p ${./.} \
-                "$@"
-            '')
+          runtimeInputs = [
+            quickshelled
+            pkgs.linux-wallpaperengine
           ];
+          text = ''
+            exec quickshell -p ${./.} "$@"
+          '';
         };
 
         packages.default = icy-shell;
@@ -65,6 +64,8 @@
             uv
             pkg-config
             portaudio
+
+            linux-wallpaperengine
           ];
 
           shellHook = ''
