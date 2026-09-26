@@ -4,49 +4,48 @@ import Quickshell
 
 import "../../../ui"
 import "../../../theme"
+import "../../../services"
 
 Text {
     id: root
-    text: "⏻"
-
+    text: "\u23FB"
 
     Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
     color: popup.show ? Colors.palette().red : Colors.palette().text
 
     BasePopup {
         id: popup
-
         parentItem: root
 
         ColumnLayout {
             PopupButton {
-                iconName: "lock"
+                iconName: "system-lock-screen"
                 text: "Lock"
-                clicked: {}
+                clicked: () => Compositor.lock()
             }
 
             PopupButton {
-                iconName: "exit"
+                iconName: "system-log-out"
                 text: "Logout"
-                clicked: {}
+                clicked: () => Compositor.logout()
             }
 
             PopupButton {
-                iconName: "exit"
+                iconName: "system-suspend"
                 text: "Suspend"
-                clicked: {}
+                clicked: () => Compositor.suspend()
             }
 
             PopupButton {
-                iconName: "exit"
+                iconName: "system-reboot"
                 text: "Reboot"
-                clicked: {}
+                clicked: () => Compositor.reboot()
             }
 
             PopupButton {
-                iconName: "exit"
+                iconName: "system-shutdown"
                 text: "Shutdown"
-                clicked: {}
+                clicked: () => Compositor.shutdown()
             }
         }
     }

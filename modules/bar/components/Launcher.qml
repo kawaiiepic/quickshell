@@ -3,25 +3,27 @@ import Qt5Compat.GraphicalEffects
 import QtQuick.Controls
 import Quickshell.Io
 
+import "../../../services"
+
 Button {
     id: btn
     implicitWidth: 23
     implicitHeight: 23
 
-    property string tooltipText
+    property string tooltipText: "Apps"
 
     Process {
         running: true
         command: ["uname", "-r"]
         stdout: StdioCollector {
             onStreamFinished: {
-                btn.tooltipText = `NixOS ${this.text.trim()}`;
+                btn.tooltipText = "NixOS " + this.text.trim();
             }
         }
     }
 
     onClicked: {
-        print("Clicked!");
+        GlobalData.showAppMenu = !GlobalData.showAppMenu;
     }
 
     HoverHandler {
@@ -46,9 +48,7 @@ Button {
 
         layer.enabled: true
         layer.effect: OpacityMask {
-            id: opacityMaskInstance
             maskSource: Rectangle {
-                id: maskedRect
                 width: imageInstance.width
                 height: imageInstance.height
                 radius: imageInstance.radius

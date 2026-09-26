@@ -11,7 +11,6 @@ Rectangle {
     id: root
 
     property ShellScreen screen
-
     property bool vertical: true
 
     implicitWidth: root.vertical ? parent.width : 200
@@ -19,60 +18,63 @@ Rectangle {
 
     color: "transparent"
 
+    readonly property var win: Compositor.focusedWindow
+    readonly property string iconSource: win && win.iconSource ? win.iconSource : Quickshell.iconPath("desktop")
+    readonly property string titleText: win ? (win.title || "Desktop") : "Desktop"
+    readonly property string appText: win ? (win.appId || "") : ""
+
     Row {
         visible: !root.vertical
+        spacing: 6
+        anchors.verticalCenter: parent.verticalCenter
 
         IconImage {
             implicitWidth: 16
             implicitHeight: 16
-            Layout.alignment: Qt.AlignHCenter
-            source: Niri.focusedWindow?.iconPath ? "file://" + Niri.focusedWindow.iconPath : Quickshell.iconPath("desktop")
-            Layout.topMargin: 8
+            source: root.iconSource
         }
 
         Text {
-            id: label
             color: Colors.palette().text
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            text: Niri.focusedWindow ? Niri.focusedWindow.title : "Desktop"
+            text: root.titleText
             elide: Text.ElideRight
+            width: 160
         }
     }
 
     ColumnLayout {
-        id: layout
-
         visible: root.vertical
-
         spacing: 8
+        width: parent.width
 
         BasePopup {
             id: popup
-
             parentItem: root
             screen: root.screen
 
             ColumnLayout {
-
                 IconImage {
                     Layout.preferredWidth: 24
                     Layout.preferredHeight: 24
-                    source: Niri.focusedWindow?.iconPath ? "file://" + Niri.focusedWindow.iconPath : "" ?? ""
+                    source: root.iconSource
                 }
 
                 Text {
-                    text: Niri.focusedWindow ? Niri.focusedWindow.title : "Desktop"
+                    text: root.titleText
                     horizontalAlignment: Text.AlignHCenter
                     color: Colors.palette().text
                     elide: Text.ElideRight
+                    Layout.preferredWidth: 180
                 }
 
                 Text {
-                    text: Niri.focusedWindow ? Niri.focusedWindow.appId : ''
+                    text: root.appText
                     horizontalAlignment: Text.AlignHCenter
-                    color: Colors.palette().text
+                    color: Colors.palette().subtext0
                     elide: Text.ElideRight
+                    Layout.preferredWidth: 180
                 }
             }
         }
@@ -81,27 +83,27 @@ Rectangle {
             implicitWidth: 16
             implicitHeight: 16
             Layout.alignment: Qt.AlignHCenter
-            source: Niri.focusedWindow?.iconPath ? "file://" + Niri.focusedWindow.iconPath : Quickshell.iconPath("desktop")
-
+            source: root.iconSource
             Layout.topMargin: 8
         }
 
         Item {
             id: boop
             Layout.bottomMargin: 8
+            Layout.alignment: Qt.AlignHCenter
 
-            property int maxText: Math.min(Math.max(label.implicitWidth + 1, 50), 300)
+            property int maxText: Math.min(Math.max(rotated.implicitWidth + 1, 50), 220)
 
             implicitHeight: maxText
-            implicitWidth: label2.implicitHeight
+            implicitWidth: rotated.implicitHeight
 
             Text {
-                id: label2
+                id: rotated
                 anchors.centerIn: parent
                 color: Colors.palette().text
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
-                text: Niri.focusedWindow ? Niri.focusedWindow.title : "Desktop"
+                text: root.titleText
                 elide: Text.ElideRight
                 width: boop.maxText
                 rotation: 90

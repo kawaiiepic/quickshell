@@ -17,10 +17,10 @@ Variants {
 
         WlrLayershell.namespace: "quickshell-bar"
 
-        visible: !ToplevelManager.activeToplevel.maximized
+        visible: !(Compositor.focusedWorkspace && Compositor.focusedWorkspace.hasFullscreen)
 
         Component.onCompleted: {
-            Niri;
+            Compositor;
         }
 
         anchors {

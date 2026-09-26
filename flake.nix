@@ -6,12 +6,6 @@
       url = "git+https://git.outfoxxed.me/quickshell/quickshell?ref=master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    qml-niri = {
-      url = "github:imiric/qml-niri/main";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.quickshell.follows = "quickshell";
-    };
   };
 
   outputs =
@@ -32,7 +26,6 @@
           pkgs.kdePackages.qtimageformats
           pkgs.kdePackages.qtmultimedia
           pkgs.kdePackages.qtwebsockets
-          inputs.qml-niri.packages.${system}.default
         ];
 
         icy-shell = pkgs.writeShellApplication {
@@ -70,9 +63,7 @@
 
           shellHook = ''
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libs}
-            export QML_IMPORT_PATH=${quickshelled}/lib/qt-6/qml/:${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml/:${
-              inputs.qml-niri.packages.${system}.default
-            }/lib/qt-6/qml/:${pkgs.kdePackages.kirigami.unwrapped}/lib/qt-6/qml
+            export QML_IMPORT_PATH=${quickshelled}/lib/qt-6/qml/:${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml/:${pkgs.kdePackages.kirigami.unwrapped}/lib/qt-6/qml
           '';
         };
       in
