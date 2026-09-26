@@ -49,7 +49,6 @@ Rectangle {
                     }
 
                     Repeater {
-
                         model: opener.children
 
                         delegate: Item {
@@ -67,7 +66,6 @@ Rectangle {
                                 contentItem: Rectangle {
                                     implicitWidth: 50
                                     implicitHeight: 2
-
                                     anchors.centerIn: parent
                                     radius: 20
                                     color: Colors.palette().text
@@ -120,6 +118,19 @@ Rectangle {
                     width: 15
                     height: 15
                     source: item.modelData.icon
+                }
+
+                TapHandler {
+                    acceptedButtons: Qt.LeftButton
+                    onTapped: item.modelData.activate()
+                }
+
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: {
+                        if (item.modelData.hasMenu)
+                            popup.show = !popup.show;
+                    }
                 }
             }
         }
