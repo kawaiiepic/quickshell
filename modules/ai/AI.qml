@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import Quickshell
-import Niri
 import Quickshell.Io
 
 ShellRoot {
@@ -30,36 +29,14 @@ ShellRoot {
                 if (line.length === 0 || line.includes("[BLANK_AUDIO]"))
                     return;
 
-                // if (line.includes("(") || line.includes("["))
-                //     return;
-
                 const lower = line.toLowerCase();
-
-                // only continue if keyword exists
-                // if (!lower.includes(wakeWord))
-                //     return;
-
-                // remove keyword from message
                 const cleaned = lower.replace(wakeWord, "").trim();
 
                 if (!cleaned.length)
                     return;
 
                 console.log("sending to ai:", cleaned);
-
                 callAI(cleaned);
-            }
-        }
-    }
-
-    Item {
-        Niri {
-            id: niri
-            Component.onCompleted: connect()
-
-            onConnected: console.log("Connected to niri")
-            onErrorOccurred: function (error) {
-                console.error("Error:", error);
             }
         }
     }
@@ -67,7 +44,6 @@ ShellRoot {
     function showNotification(text) {
         console.log("Attempting at: " + text);
         process.command = ["sh", "-c", `/home/mia/Documents/quickshell/assets/scripts/say.sh ${text}`];
-        // process.command = ["kokoro", "-t", text, "-l", "e", "-m", "/home/mia/Documents/quickshell/modules/ai/Kokoro-82M/voices/af_alloy.pt", "-o", "/tmp/tts.wav"];
         process.running = true;
     }
 
@@ -85,12 +61,10 @@ ShellRoot {
             content: generateSystemPrompt()
         });
 
-        // inject memory
         for (let i = 0; i < history.length; i++) {
             msgs.push(history[i]);
         }
 
-        // current event
         msgs.push({
             role: "user",
             content: payload
@@ -150,7 +124,6 @@ ShellRoot {
             stream: false
         }));
     }
-
 
     Component.onCompleted: {
         console.log("AI shell started");
