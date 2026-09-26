@@ -17,7 +17,6 @@ Variants {
             id: barWindow
             screen: scope.modelData
             color: "transparent"
-            // WlrLayershell.layer: ToplevelManager.activeToplevel.maximized ? WlrLayer.Bottom : WlrLayer.Top
 
             aboveWindows: true
 
@@ -141,7 +140,6 @@ Variants {
 
             color: "transparent"
             WlrLayershell.namespace: "quickshell-blur-test"
-            // WlrLayershell.layer: WlrLayer.Background
 
             anchors {
                 top: true
@@ -169,7 +167,7 @@ Variants {
                         Layout.topMargin: 5
                     }
 
-                    NiriWorkspace {
+                    Workspaces {
                         screen: scope.modelData
                     }
 
