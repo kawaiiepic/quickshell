@@ -10,16 +10,13 @@ Singleton {
 
     property Process process: Process {}
 
-    property ListModel popupNotifications: ListModel {
-        id: popup
-    }
+    property ListModel popupNotifications: ListModel {}
     property ListModel historyNotifications: ListModel {}
     property var notifications: ({})
 
     property bool doNotDisturb: false
     property int maxVisible: 5
     property int maxHistory: 100
-
     property bool urgent: false
 
     property var server: NotificationServer {
@@ -35,8 +32,6 @@ Singleton {
         onNotification: n => {
             n.tracked = true;
 
-            var count = root.popupNotifications.count;
-
             var item = {
                 id: n.id,
                 summary: n.summary,
@@ -49,20 +44,9 @@ Singleton {
                 hints: n.hints
             };
 
-            n.summaryChanged.connect(updateNot);
-            n.bodyChanged.connect(updateNot);
-
-            function updateNot() {
-                item.summary = n.summary;
-                item.body = n.body;
-                root.popupNotifications.set(root.popupNotifications.count, item);
-                root.historyNotifications.set(root.historyNotifications.count, item);
-            }
-
             if (!root.doNotDisturb) {
-                if (!n.lastGeneration) {
+                if (!n.lastGeneration)
                     root.popupNotifications.append(item);
-                }
                 root.historyNotifications.append(item);
                 root.playNotificationSound();
             }
@@ -79,14 +63,23 @@ Singleton {
     }
 
     function dismissNotification() {
+        if (popupNotifications.count > 0)
+            popupNotifications.remove(0);
+    }
+
+    function clearHistory() {
+        historyNotifications.clear();
+        popupNotifications.clear();
+        urgent = false;
     }
 
     function invokeAction(id, actionIdentifier) {
         var notification = root.notifications[id];
+        if (!notification)
+            return;
         for (const action of notification.actions) {
-            if (action.identifier == actionIdentifier) {
+            if (action.identifier == actionIdentifier)
                 action.invoke();
-            }
         }
     }
 }
