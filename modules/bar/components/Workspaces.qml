@@ -11,8 +11,8 @@ import "../../../services"
 
 Rectangle {
     id: root
-
     property ShellScreen screen
+    property int workspaceCount: 10
 
     implicitWidth: parent.width
     implicitHeight: loader.item ? loader.item.implicitHeight + 8 : 20
@@ -21,17 +21,21 @@ Rectangle {
     border.color: Colors.palette().mantle
     radius: 10
 
-    readonly property var workspaceIcons: ({
-        "1": "\uE658",
-        "2": "\uE795",
-        "3": "\uDB2F",
-        "4": "\uF372",
-        "5": "\uF1B6"
-    })
+    function workspaceById(id) {
+        const list = Hyprland.workspaces.values || [];
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].id === id)
+                return list[i];
+        }
+        return null;
+    }
 
-    function labelFor(ws) {
-        const key = String(ws.name || ws.id);
-        return root.workspaceIcons[key] || String(ws.id > 0 ? ws.id : key);
+    function activateId(id) {
+        const ws = root.workspaceById(id);
+        if (ws && typeof ws.activate === "function")
+            ws.activate();
+        else
+            Hyprland.dispatch("workspace " + id);
     }
 
     Loader {
@@ -45,91 +49,71 @@ Rectangle {
 
     Component {
         id: detailed
-
         ColumnLayout {
             spacing: 5
             width: loader.width
-
             Repeater {
-                model: Hyprland.workspaces
-
+                model: root.workspaceCount
                 delegate: Item {
                     id: item
-                    required property var modelData
+                    required property int index
+                    readonly property int wsId: index + 1
+                    readonly property var ws: root.workspaceById(wsId)
+                    readonly property bool focused: !!(ws && ws.focused)
+                    readonly property var tops: ws && ws.toplevels ? ws.toplevels.values : []
+                    readonly property int windowCount: tops ? tops.length : 0
+                    readonly property bool occupied: windowCount > 0 || !!(ws && ws.active)
 
-                    visible: Compositor.workspaceOnScreen(modelData, root.screen)
                     Layout.preferredWidth: 20
-                    Layout.preferredHeight: visible ? (modelData.focused ? Math.max(bg.implicitHeight, 20) : 20) : 0
+                    Layout.preferredHeight: focused ? Math.max(bg.implicitHeight, 20) : 20
                     Layout.alignment: Qt.AlignHCenter
-
-                    readonly property int windowCount: modelData.toplevels ? modelData.toplevels.values.length : 0
-                    readonly property bool occupied: windowCount > 0 || modelData.focused || modelData.active
 
                     Rectangle {
                         id: bg
-                        visible: item.visible && item.modelData.focused
+                        visible: item.focused
                         anchors.fill: parent
                         anchors.margins: 2
                         implicitHeight: windowsLayout.implicitHeight + 16
                         implicitWidth: 20
                         radius: 6
                         color: Colors.palette().surface1
-
                         ColumnLayout {
                             id: windowsLayout
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.centerIn: parent
                             spacing: 2
-
                             IconImage {
                                 visible: item.windowCount === 0
                                 source: Quickshell.iconPath("desktop")
-                                Layout.alignment: Qt.AlignHCenter
                                 implicitHeight: 16
                                 implicitWidth: 16
                             }
-
                             Repeater {
-                                model: item.modelData.toplevels
-
+                                model: item.ws ? item.ws.toplevels : []
                                 delegate: Item {
                                     id: windowItem
                                     required property var modelData
-
                                     implicitHeight: 16
                                     implicitWidth: 16
-
                                     ToolTip.visible: hover.hovered
                                     ToolTip.delay: 400
                                     ToolTip.text: modelData.title || ""
-
-                                    HoverHandler {
-                                        id: hover
-                                    }
-
+                                    HoverHandler { id: hover }
                                     IconImage {
                                         anchors.fill: parent
                                         source: Compositor.iconForToplevel(windowItem.modelData)
                                     }
-
-                                    TapHandler {
-                                        onTapped: Compositor.focusWindow(windowItem.modelData)
-                                    }
+                                    TapHandler { onTapped: Compositor.focusWindow(windowItem.modelData) }
                                 }
                             }
                         }
                     }
-
                     Text {
-                        visible: item.visible && !item.modelData.focused
+                        visible: !item.focused
                         anchors.centerIn: parent
-                        font.pixelSize: 14
-                        color: item.modelData.urgent ? Colors.palette().red : (item.occupied ? Colors.palette().text : Colors.palette().surface2)
-                        text: root.labelFor(item.modelData)
-
-                        TapHandler {
-                            onTapped: Compositor.activateWorkspace(item.modelData)
-                        }
+                        font.pixelSize: 12
+                        color: (item.ws && item.ws.urgent) ? Colors.palette().red : (item.occupied ? Colors.palette().text : Colors.palette().surface2)
+                        text: String(item.wsId)
+                        TapHandler { onTapped: root.activateId(item.wsId) }
                     }
                 }
             }
@@ -138,51 +122,33 @@ Rectangle {
 
     Component {
         id: simple
-
         ColumnLayout {
             spacing: 6
             width: loader.width
-
             Repeater {
-                model: Hyprland.workspaces
-
+                model: root.workspaceCount
                 delegate: Item {
                     id: pill
-                    required property var modelData
-
-                    visible: Compositor.workspaceOnScreen(modelData, root.screen)
-                    implicitHeight: visible ? 18 : 0
+                    required property int index
+                    readonly property int wsId: index + 1
+                    readonly property var ws: root.workspaceById(wsId)
+                    readonly property bool focused: !!(ws && ws.focused)
+                    readonly property bool occupied: !!(ws && ((ws.toplevels && ws.toplevels.values.length > 0) || ws.active))
+                    implicitHeight: 18
                     implicitWidth: 18
                     Layout.alignment: Qt.AlignHCenter
-                    Layout.preferredHeight: visible ? 18 : 0
-
-                    readonly property bool occupied: (modelData.toplevels && modelData.toplevels.values.length > 0) || modelData.active
-
                     Rectangle {
                         anchors.centerIn: parent
-                        implicitHeight: pill.modelData.focused ? 16 : (pill.occupied ? 10 : 8)
+                        implicitHeight: pill.focused ? 16 : (pill.occupied ? 10 : 8)
                         implicitWidth: 8
                         radius: 8
-                        color: pill.modelData.urgent ? Colors.palette().red : (pill.modelData.focused ? Colors.palette().pink : (pill.occupied ? Colors.palette().text : Colors.palette().surface2))
-
-                        Behavior on implicitHeight {
-                            NumberAnimation {
-                                duration: 120
-                            }
-                        }
+                        color: (pill.ws && pill.ws.urgent) ? Colors.palette().red : (pill.focused ? Colors.palette().pink : (pill.occupied ? Colors.palette().text : Colors.palette().surface2))
                     }
-
-                    TapHandler {
-                        onTapped: Compositor.activateWorkspace(pill.modelData)
-                    }
-
+                    TapHandler { onTapped: root.activateId(pill.wsId) }
                     ToolTip.visible: hover.hovered
                     ToolTip.delay: 400
-                    ToolTip.text: "Workspace " + (pill.modelData.name || pill.modelData.id)
-
-                    HoverHandler {
-                        id: hover
-                    }
+                    ToolTip.text: "Workspace " + pill.wsId
+                    HoverHandler { id: hover }
                 }
             }
         }

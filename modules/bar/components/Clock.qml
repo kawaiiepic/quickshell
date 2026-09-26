@@ -9,30 +9,28 @@ import "../../../theme"
 
 ColumnLayout {
     id: root
-
     property ShellScreen screen
-
     property bool vertical: true
+    property int viewYear: clock.date.getFullYear()
+    property int viewMonth: clock.date.getMonth()
 
     SystemClock {
         id: clock
         precision: SystemClock.Minutes
     }
 
-    // anchors.horizontalCenter: parent.horizontalCenter
-
     Text {
         visible: !root.vertical
-        text: "" + " " + Qt.formatDateTime(clock.date, "hh:mm")
+        text: Qt.formatDateTime(clock.date, "ddd dd   hh:mm")
         color: popup.show ? Colors.palette().pink : Colors.palette().text
     }
     Text {
         visible: root.vertical
-        text: ""
+        text: "cal"
         Layout.alignment: Qt.AlignHCenter
         color: popup.show ? Colors.palette().pink : Colors.palette().text
+        font.pixelSize: 11
     }
-
     Text {
         visible: root.vertical
         text: Qt.formatDateTime(clock.date, "hh\nmm")
@@ -42,119 +40,72 @@ ColumnLayout {
 
     BasePopup {
         id: popup
-
         parentItem: root
         screen: root.screen
-
         ColumnLayout {
-
+            spacing: 8
+            width: 240
             Text {
-                text: "Calendar"
+                text: Qt.formatDateTime(clock.date, "dddd, MMM d")
                 color: Colors.palette().text
+                font.pixelSize: 14
             }
-
-            Rectangle {
-                id: calendar
-                width: 200
-                height: 200
-
-                ListView {
-                    id: listview
-
-                    width: calendar.width
-                    height: calendar.height
-                    // property int padding: 5
-                    snapMode: ListView.SnapOneItem
-                    orientation: ListView.Horizontal
-                    highlightRangeMode: ListView.StrictlyEnforceRange
-
-                    model: CalendarModel {
-                        from: new Date(clock.date.getFullYear(), 0, 1)
-                        to: new Date(clock.date.getFullYear(), 11, 31)
+            RowLayout {
+                Layout.fillWidth: true
+                Button {
+                    text: "<"
+                    onClicked: {
+                        if (root.viewMonth === 0) { root.viewMonth = 11; root.viewYear -= 1; }
+                        else root.viewMonth -= 1;
                     }
-
-                    currentIndex: clock.date.getMonth()
-
-                    delegate: ColumnLayout {
-                        id: month
-                        required property var month
-                        required property var year
-
-                        implicitWidth: 100
-                        Layout.preferredWidth: 200
-
-                        Text {
-                            id: title
-                            text: grid.title
-                            color: month.month == clock.date.getMonth() ? Colors.palette().pink : Colors.palette().text
-                            horizontalAlignment: Text.AlignHCenter
-                            Layout.fillWidth: true
-                            // anchors.centerIn: month
-                        }
-
-                        GridLayout {
-
-                            columns: 2
-
-                            DayOfWeekRow {
-                                locale: grid.locale
-
-                                Layout.preferredWidth: listview.width - listview.padding
-
-                                Layout.column: 1
-                                Layout.fillWidth: true
-
-                                delegate: Text {
-                                    text: shortName
-                                    color: Colors.palette().subtext0
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-
-                                    required property string shortName
-                                }
-                            }
-
-                            WeekNumberColumn {
-                                month: grid.month
-                                year: grid.year
-                                locale: grid.locale
-
-                                Layout.preferredHeight: listview.height - listview.padding - title.implicitHeight - 10
-
-                                delegate: Text {
-                                    text: weekNumber
-                                    color: Colors.palette().subtext0
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-
-                                    required property int weekNumber
-                                }
-                            }
-
-                            MonthGrid {
-                                id: grid
-
-                                Layout.preferredWidth: listview.width
-                                Layout.preferredHeight: listview.height - title.implicitHeight
-
-                                month: month.month
-                                year: month.year
-                                locale: Qt.locale("en_US")
-                                delegate: Text {
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    opacity: month.month === model.month ? 1 : 0.8
-                                    text: grid.locale.toString(model.date, "d")
-                                    color: month.month === model.month ? (clock.date.getDate() == grid.locale.toString(model.date, "d") && clock.date.getMonth() == model.month) ? Colors.palette().pink : Colors.palette().text : Colors.palette().surface0
-                                    font: grid.font
-
-                                    required property var model
-                                }
-                            }
-                        }
+                    background: Rectangle { color: "transparent" }
+                    contentItem: Text { text: parent.text; color: Colors.palette().text }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    text: Qt.locale("en_US").monthName(root.viewMonth) + " " + root.viewYear
+                    color: Colors.palette().text
+                }
+                Button {
+                    text: ">"
+                    onClicked: {
+                        if (root.viewMonth === 11) { root.viewMonth = 0; root.viewYear += 1; }
+                        else root.viewMonth += 1;
                     }
-
-                    ScrollIndicator.horizontal: ScrollIndicator {}
+                    background: Rectangle { color: "transparent" }
+                    contentItem: Text { text: parent.text; color: Colors.palette().text }
+                }
+            }
+            DayOfWeekRow {
+                locale: Qt.locale("en_US")
+                Layout.fillWidth: true
+                delegate: Text {
+                    required property string shortName
+                    text: shortName
+                    color: Colors.palette().subtext0
+                    horizontalAlignment: Text.AlignHCenter
+                    font.pixelSize: 10
+                }
+            }
+            MonthGrid {
+                id: grid
+                Layout.fillWidth: true
+                month: root.viewMonth
+                year: root.viewYear
+                locale: Qt.locale("en_US")
+                delegate: Text {
+                    required property var model
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text: grid.locale.toString(model.date, "d")
+                    opacity: model.month === grid.month ? 1 : 0.35
+                    color: {
+                        const today = clock.date;
+                        const isToday = model.day === today.getDate() && model.month === today.getMonth() && model.year === today.getFullYear();
+                        return isToday ? Colors.palette().pink : Colors.palette().text;
+                    }
+                    font.pixelSize: 12
                 }
             }
         }
