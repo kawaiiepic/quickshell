@@ -2,6 +2,7 @@ singleton Players Players.qml
 singleton WallpaperManager WallpaperManager.qml
 singleton NotificationManager NotificationManager.qml
 singleton Niri Niri.qml
+singleton Compositor Compositor.qml
 singleton Sound Sound.qml
 singleton Cava Cava.qml
 singleton Paths Paths.qml
