@@ -1,4 +1,5 @@
 pragma ComponentBehavior: Bound
+
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
@@ -23,7 +24,6 @@ Variants {
 
         required property var modelData
 
-        // we can then set the window's screen to the injected property
         screen: modelData
 
         visible: GlobalData.showAppMenu
@@ -32,6 +32,9 @@ Variants {
         implicitHeight: Math.min(400, screen.height - 40)
 
         onRequestClose: {
+            field.text = "";
+            appList.activeCategory = "ALL";
+            content.mode = "apps";
             GlobalData.showAppMenu = false;
         }
 
@@ -46,18 +49,13 @@ Variants {
         anchorBottom: true
         horizontalCenter: true
 
-        // anchors {
-        //     bottom: true
-        // }
-
         margins {
             bottom: 5
         }
 
-
-
         StyledRect {
             id: rectangle
+
             parentWindow: bottom
 
             implicitHeight: 400
@@ -68,6 +66,7 @@ Variants {
 
             ColumnLayout {
                 id: appList
+
                 anchors.fill: parent
                 spacing: 0
 
@@ -82,20 +81,22 @@ Variants {
                     }
                 ]
 
-                // collect unique categories from all apps
                 property var allCategories: {
                     const query = field.text.toLowerCase();
+
                     if (query.startsWith(">wallpaper")) {
                         return ["ALL", "NORMAL", "ANIMATED"];
                     }
-                    const cats = new Set();
-                    for (const app of DesktopEntries.applications.values) {
-                        for (const c of app.categories) {
-                            if (c && c.length > 0)
-                                cats.add(c);
-                        }
-                    }
-                    return ["ALL", ...Array.from(cats).sort().slice(0, 6)];
+
+                    return [
+                        "ALL",
+                        "Development",
+                        "Games",
+                        "Graphics",
+                        "Internet",
+                        "Multimedia",
+                        "System"
+                    ];
                 }
 
                 property int count: 0
@@ -106,19 +107,68 @@ Variants {
 
                     if (query.startsWith(">")) {
                         for (const command of customCommands) {
-                            if (command.name.toLowerCase().includes(query.slice(1).trim().toLowerCase()))
+                            if (
+                                command.name
+                                    .toLowerCase()
+                                    .includes(
+                                        query.slice(1).trim().toLowerCase()
+                                    )
+                            ) {
                                 out.push(command);
+                            }
                         }
                     }
 
                     for (const app of DesktopEntries.applications.values) {
-                        const matchesQuery = app.name.toLowerCase().includes(query.toLowerCase());
-                        const matchesCat = appList.activeCategory === "ALL" || app.categories.includes(appList.activeCategory);
-                        if (matchesQuery && matchesCat)
+                        const categories = app.categories || [];
+
+                        let category = "System";
+
+                        if (
+                            categories.includes("Development") ||
+                            categories.includes("IDE")
+                        ) {
+                            category = "Development";
+                        } else if (
+                            categories.includes("Game")
+                        ) {
+                            category = "Games";
+                        } else if (
+                            categories.includes("Graphics") ||
+                            categories.includes("Photography")
+                        ) {
+                            category = "Graphics";
+                        } else if (
+                            categories.includes("Network") ||
+                            categories.includes("WebBrowser") ||
+                            categories.includes("Email")
+                        ) {
+                            category = "Internet";
+                        } else if (
+                            categories.includes("AudioVideo") ||
+                            categories.includes("Audio") ||
+                            categories.includes("Video") ||
+                            categories.includes("Player")
+                        ) {
+                            category = "Multimedia";
+                        }
+
+                        const matchesQuery =
+                            app.name
+                                .toLowerCase()
+                                .includes(query);
+
+                        const matchesCat =
+                            appList.activeCategory === "ALL" ||
+                            category === appList.activeCategory;
+
+                        if (matchesQuery && matchesCat) {
                             out.push({
                                 type: "app",
-                                desktopEntry: app
+                                desktopEntry: app,
+                                displayCategory: category
                             });
+                        }
                     }
 
                     appList.count = out.length;
@@ -126,8 +176,9 @@ Variants {
                     return out;
                 }
 
-                // ── category tabs ────────────────────────────────────────────
                 Item {
+                    visible: appList.allCategories.length > 0
+
                     Layout.fillWidth: true
                     Layout.preferredHeight: 32
                     Layout.topMargin: 10
@@ -136,78 +187,121 @@ Variants {
 
                     ListView {
                         id: catTabs
+
                         anchors.fill: parent
+
                         orientation: ListView.Horizontal
                         spacing: 4
                         clip: true
+
                         model: appList.allCategories
 
                         delegate: Item {
                             required property string modelData
                             required property int index
+
                             width: catLabel.implicitWidth + 20
                             height: 28
 
                             Rectangle {
                                 anchors.fill: parent
+
                                 radius: 10
-                                color: appList.activeCategory === modelData ? Colors.palette().surface1 : Colors.palette().surface0
-                                border.color: appList.activeCategory === modelData ? Colors.palette().pink : Colors.palette().crust
+
+                                color:
+                                    appList.activeCategory === modelData
+                                        ? Colors.palette().surface1
+                                        : Colors.palette().surface0
+
+                                border.color:
+                                    appList.activeCategory === modelData
+                                        ? Colors.palette().pink
+                                        : Colors.palette().crust
+
                                 border.width: 0
 
                                 Text {
                                     id: catLabel
+
                                     anchors.centerIn: parent
+
                                     text: modelData
+
                                     font.family: "Share Tech Mono"
                                     font.pixelSize: 10
                                     font.letterSpacing: 0.6
-                                    color: appList.activeCategory === modelData ? Colors.palette().text : Colors.palette().subtext0
+
+                                    color:
+                                        appList.activeCategory === modelData
+                                            ? Colors.palette().text
+                                            : Colors.palette().subtext0
                                 }
 
                                 TapHandler {
-                                    onTapped: appList.activeCategory = modelData
+                                    onTapped:
+                                        appList.activeCategory = modelData
                                 }
                             }
                         }
                     }
                 }
 
-                // ── thin divider ─────────────────────────────────────────────
                 Rectangle {
+                    visible: field.text.length > 0
+
                     Layout.fillWidth: true
                     Layout.leftMargin: 10
                     Layout.rightMargin: 10
+
                     height: 1
+
                     color: Colors.palette().surface1
                 }
 
-                // ── app list ─────────────────────────────────────────────────
                 Item {
                     id: content
+
                     property string mode: "apps"
+
                     Layout.fillHeight: true
                     Layout.fillWidth: true
 
                     Loader {
                         id: loader
+
                         anchors.fill: parent
-                        sourceComponent: content.mode === "apps" ? appsComp : wallpaperComp
+
+                        sourceComponent:
+                            content.mode === "apps"
+                                ? appsComp
+                                : wallpaperComp
+
                         onLoaded: {
-                            bottom.implicitHeight = content.mode === "wallpaper" ? 500 : Math.min(400, screen.height - 40);
+                            bottom.implicitHeight =
+                                content.mode === "wallpaper"
+                                    ? 500
+                                    : Math.min(
+                                          400,
+                                          screen.height - 40
+                                      );
+
                             searchBar.list = item.listView;
                         }
                     }
 
                     Component {
                         id: appsComp
+
                         Item {
                             property alias listView: list
 
                             ListView {
                                 id: list
+
                                 anchors.fill: parent
+
                                 model: appList.filteredApplications
+
                                 clip: true
                                 spacing: 2
                                 topMargin: 6
@@ -219,181 +313,303 @@ Variants {
                                 delegate: DelegateChooser {
                                     role: "type"
 
-                                    // ── command row ──────────────────────────
                                     DelegateChoice {
                                         roleValue: "command"
 
                                         Item {
                                             id: cmdRow
+
                                             width: list.width
                                             height: 44
+
                                             required property var model
 
                                             function activate() {
-                                                field.text = ">" + model.name.toLowerCase();
+                                                field.text =
+                                                    ">" +
+                                                    model.name.toLowerCase();
                                             }
 
                                             Rectangle {
                                                 anchors.fill: parent
+
                                                 anchors.leftMargin: 8
                                                 anchors.rightMargin: 8
+
                                                 radius: 8
-                                                color: cmdRow.ListView.isCurrentItem ? Colors.palette().surface0 : "transparent"
-                                                border.color: cmdRow.ListView.isCurrentItem ? Colors.palette().crust : "transparent"
+
+                                                color:
+                                                    cmdRow.ListView.isCurrentItem
+                                                        ? Colors.palette().surface0
+                                                        : "transparent"
+
+                                                border.color:
+                                                    cmdRow.ListView.isCurrentItem
+                                                        ? Colors.palette().crust
+                                                        : "transparent"
+
                                                 border.width: 1
 
                                                 RowLayout {
                                                     anchors.fill: parent
                                                     anchors.leftMargin: 10
-                                                    // anchors.rightMargin: 10
-                                                    // spacing: 12
 
                                                     Rectangle {
                                                         width: 30
                                                         height: 30
+
                                                         radius: 3
-                                                        color: Colors.palette().base
-                                                        border.color: Colors.palette().crust
+
+                                                        color:
+                                                            Colors.palette().base
+
+                                                        border.color:
+                                                            Colors.palette().crust
+
                                                         border.width: 1
+
                                                         Text {
                                                             anchors.centerIn: parent
-                                                            text: cmdRow.model.icon
+
+                                                            text:
+                                                                cmdRow.model.icon
+
                                                             font.pixelSize: 16
-                                                            color: Colors.palette().text
+
+                                                            color:
+                                                                Colors.palette().text
                                                         }
                                                     }
 
                                                     ColumnLayout {
                                                         spacing: 2
+
                                                         Text {
-                                                            text: cmdRow.model.name
-                                                            font.family: "Share Tech Mono"
+                                                            text:
+                                                                cmdRow.model.name
+
+                                                            font.family:
+                                                                "Share Tech Mono"
+
                                                             font.pixelSize: 13
-                                                            color: Colors.palette().text
+
+                                                            color:
+                                                                Colors.palette().text
                                                         }
+
                                                         Text {
-                                                            text: cmdRow.model.desc
-                                                            font.family: "Share Tech Mono"
+                                                            text:
+                                                                cmdRow.model.desc
+
+                                                            font.family:
+                                                                "Share Tech Mono"
+
                                                             font.pixelSize: 10
-                                                            color: Colors.palette().text
+
+                                                            color:
+                                                                Colors.palette().text
                                                         }
                                                     }
                                                 }
 
                                                 MouseArea {
                                                     anchors.fill: parent
-                                                    onClicked: cmdRow.activate()
+
+                                                    onClicked:
+                                                        cmdRow.activate()
                                                 }
                                             }
                                         }
                                     }
 
-                                    // ── app row ──────────────────────────────
                                     DelegateChoice {
                                         roleValue: "app"
 
                                         Item {
                                             id: appRow
+
                                             width: list.width
                                             height: 50
+
                                             required property var model
                                             required property int index
 
                                             function activate() {
                                                 appRow.model.desktopEntry.execute();
+
                                                 field.text = "";
+                                                appList.activeCategory = "ALL";
+
                                                 root.requestClose();
                                             }
 
                                             Rectangle {
                                                 anchors.fill: parent
+
                                                 anchors.leftMargin: 8
                                                 anchors.rightMargin: 8
+
                                                 radius: 3
-                                                color: appRow.ListView.isCurrentItem ? Colors.palette().surface0 : "transparent"
-                                                border.color: appRow.ListView.isCurrentItem ? Colors.palette().crust : "transparent"
+
+                                                color:
+                                                    appRow.ListView.isCurrentItem
+                                                        ? Colors.palette().surface0
+                                                        : "transparent"
+
+                                                border.color:
+                                                    appRow.ListView.isCurrentItem
+                                                        ? Colors.palette().crust
+                                                        : "transparent"
+
                                                 border.width: 1
 
-                                                // left accent on selected
                                                 Rectangle {
-                                                    visible: appRow.ListView.isCurrentItem
+                                                    visible:
+                                                        appRow.ListView.isCurrentItem
+
                                                     width: 2
                                                     height: parent.height - 12
+
                                                     anchors.left: parent.left
                                                     anchors.leftMargin: 1
-                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.verticalCenter:
+                                                        parent.verticalCenter
+
                                                     radius: 1
-                                                    color: Colors.palette().pink
+
+                                                    color:
+                                                        Colors.palette().pink
                                                 }
 
                                                 RowLayout {
                                                     anchors.fill: parent
+
                                                     anchors.leftMargin: 14
                                                     anchors.rightMargin: 10
                                                     anchors.topMargin: 6
                                                     anchors.bottomMargin: 6
+
                                                     spacing: 12
 
-                                                    // icon box
                                                     Rectangle {
                                                         width: 32
                                                         height: 32
+
                                                         radius: 6
-                                                        color: Colors.palette().mantle
-                                                        border.color: appRow.ListView.isCurrentItem ? Colors.palette().mantle : Colors.palette().crust
+
+                                                        color:
+                                                            Colors.palette().mantle
+
+                                                        border.color:
+                                                            appRow.ListView.isCurrentItem
+                                                                ? Colors.palette().mantle
+                                                                : Colors.palette().crust
+
                                                         border.width: 1
 
                                                         Image {
                                                             anchors.centerIn: parent
-                                                            source: Quickshell.iconPath(appRow.model.desktopEntry.icon, 'desktop')
+
+                                                            source:
+                                                                Quickshell.iconPath(
+                                                                    appRow.model.desktopEntry.icon,
+                                                                    "desktop"
+                                                                )
+
                                                             width: 20
                                                             height: 20
-                                                            visible: source !== ""
+
+                                                            visible:
+                                                                source !== ""
                                                         }
                                                     }
 
                                                     ColumnLayout {
                                                         spacing: 2
+
                                                         Layout.fillWidth: true
 
                                                         Text {
-                                                            text: appRow.model.desktopEntry.name
-                                                            font.family: "Share Tech Mono"
+                                                            text:
+                                                                appRow.model.desktopEntry.name
+
+                                                            font.family:
+                                                                "Share Tech Mono"
+
                                                             font.pixelSize: 13
-                                                            color: appRow.ListView.isCurrentItem ? Colors.palette().text : Colors.palette().subtext0
-                                                            elide: Text.ElideRight
+
+                                                            color:
+                                                                appRow.ListView.isCurrentItem
+                                                                    ? Colors.palette().text
+                                                                    : Colors.palette().subtext0
+
+                                                            elide:
+                                                                Text.ElideRight
+
                                                             Layout.fillWidth: true
                                                         }
 
                                                         Text {
-                                                            text: appRow.model.desktopEntry.comment || appRow.model.desktopEntry.execString
-                                                            font.family: "Share Tech Mono"
+                                                            text:
+                                                                appRow.model.desktopEntry.comment ||
+                                                                appRow.model.desktopEntry.execString
+
+                                                            font.family:
+                                                                "Share Tech Mono"
+
                                                             font.pixelSize: 9
-                                                            color: Colors.palette().subtext0
-                                                            elide: Text.ElideRight
+
+                                                            color:
+                                                                Colors.palette().subtext0
+
+                                                            elide:
+                                                                Text.ElideRight
+
                                                             Layout.fillWidth: true
                                                         }
                                                     }
 
-                                                    // category pill
                                                     Repeater {
-                                                        model: appRow.model.desktopEntry.categories.slice(0, 1)
+                                                        model: [
+                                                            appRow.model.displayCategory
+                                                        ]
+
                                                         delegate: Rectangle {
                                                             required property string modelData
+
                                                             height: 16
-                                                            implicitWidth: pillLabel.implicitWidth + 12
+
+                                                            implicitWidth:
+                                                                pillLabel.implicitWidth + 12
+
                                                             radius: 2
-                                                            color: Colors.palette().surface0
-                                                            border.color: Colors.palette().crust
+
+                                                            color:
+                                                                Colors.palette().surface0
+
+                                                            border.color:
+                                                                Colors.palette().crust
+
                                                             border.width: 1
+
                                                             Text {
                                                                 id: pillLabel
-                                                                anchors.centerIn: parent
+
+                                                                anchors.centerIn:
+                                                                    parent
+
                                                                 text: modelData
-                                                                font.family: "Share Tech Mono"
+
+                                                                font.family:
+                                                                    "Share Tech Mono"
+
                                                                 font.pixelSize: 8
-                                                                color: Colors.palette().subtext0
-                                                                font.letterSpacing: 0.4
+
+                                                                color:
+                                                                    Colors.palette().subtext0
+
+                                                                font.letterSpacing:
+                                                                    0.4
                                                             }
                                                         }
                                                     }
@@ -401,37 +617,73 @@ Variants {
 
                                                 ThemedMenu {
                                                     id: appContextMenu
+
                                                     width: 200
+
                                                     Action {
-                                                        text: qsTr("Favourite App")
+                                                        text:
+                                                            qsTr("Favourite App")
+
                                                         icon.name: "add"
+
                                                         onTriggered: {
-                                                            ASettings.apps.favouriteApps = [...ASettings.apps.favouriteApps, appRow.model.desktopEntry.name];
+                                                            ASettings.apps.favouriteApps =
+                                                                [
+                                                                    ...ASettings.apps.favouriteApps,
+                                                                    appRow.model.desktopEntry.name
+                                                                ];
+
                                                             root.requestClose();
                                                         }
                                                     }
 
                                                     Action {
-                                                        text: qsTr("Add to Desktop")
+                                                        text:
+                                                            qsTr("Add to Desktop")
+
                                                         icon.name: "add"
-                                                        onTriggered: console.log("add-to-desktop")
+
+                                                        onTriggered:
+                                                            console.log(
+                                                                "add-to-desktop"
+                                                            )
                                                     }
                                                 }
 
                                                 MouseArea {
                                                     id: mouse
+
                                                     anchors.fill: parent
+
                                                     hoverEnabled: true
-                                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                                                    acceptedButtons:
+                                                        Qt.LeftButton |
+                                                        Qt.RightButton
+
                                                     onEntered: {
-                                                        if (mouse.mouseX != list.previousMouseX || mouse.mouseY != list.previousMouseY) {
-                                                            list.currentIndex = appRow.index;
-                                                            list.previousMouseX = mouse.mouseX;
-                                                            list.previousMouseY = mouse.mouseY;
+                                                        if (
+                                                            mouse.mouseX !==
+                                                                list.previousMouseX ||
+                                                            mouse.mouseY !==
+                                                                list.previousMouseY
+                                                        ) {
+                                                            list.currentIndex =
+                                                                appRow.index;
+
+                                                            list.previousMouseX =
+                                                                mouse.mouseX;
+
+                                                            list.previousMouseY =
+                                                                mouse.mouseY;
                                                         }
                                                     }
+
                                                     onClicked: mouse => {
-                                                        if (mouse.button === Qt.LeftButton) {
+                                                        if (
+                                                            mouse.button ===
+                                                            Qt.LeftButton
+                                                        ) {
                                                             appRow.activate();
                                                         } else {
                                                             appContextMenu.popup();
@@ -448,40 +700,92 @@ Variants {
 
                     Component {
                         id: wallpaperComp
+
                         Item {
                             property alias listView: engineList
+
                             property var filteredWallpapers: {
-                                const query = field.textSplit[1] ?? "";
+                                const query =
+                                    field.textSplit[1] ?? "";
+
                                 const out = [];
-                                for (var i = 0; i < WallpaperManager.wallpaperList.count; i++) {
-                                    var fileName = WallpaperManager.wallpaperList.get(i, "fileName");
-                                    var filePath = WallpaperManager.wallpaperList.get(i, "filePath");
-                                    if (fileName.toLowerCase().includes(query.toLowerCase()))
+
+                                for (
+                                    var i = 0;
+                                    i <
+                                    WallpaperManager.wallpaperList.count;
+                                    i++
+                                ) {
+                                    var fileName =
+                                        WallpaperManager.wallpaperList.get(
+                                            i,
+                                            "fileName"
+                                        );
+
+                                    var filePath =
+                                        WallpaperManager.wallpaperList.get(
+                                            i,
+                                            "filePath"
+                                        );
+
+                                    if (
+                                        fileName
+                                            .toLowerCase()
+                                            .includes(
+                                                query.toLowerCase()
+                                            )
+                                    ) {
                                         out.push({
                                             fileIndex: i,
                                             fileName,
                                             filePath
                                         });
+                                    }
                                 }
+
                                 return out;
                             }
 
                             property var combinedModel: {
                                 const items = [];
 
-                                if (appList.activeCategory === "ALL" || appList.activeCategory === "ANIMATED") {
-                                    for (let i = 0; i < WallpaperManager.wallpaperEngineList.count; i++) {
+                                if (
+                                    appList.activeCategory === "ALL" ||
+                                    appList.activeCategory === "ANIMATED"
+                                ) {
+                                    for (
+                                        let i = 0;
+                                        i <
+                                        WallpaperManager.wallpaperEngineList.count;
+                                        i++
+                                    ) {
                                         items.push({
                                             type: "engine",
-                                            fileName: WallpaperManager.wallpaperEngineList.get(i, "fileName"),
-                                            filePath: WallpaperManager.wallpaperEngineList.get(i, "filePath"),
+                                            fileName:
+                                                WallpaperManager.wallpaperEngineList.get(
+                                                    i,
+                                                    "fileName"
+                                                ),
+                                            filePath:
+                                                WallpaperManager.wallpaperEngineList.get(
+                                                    i,
+                                                    "filePath"
+                                                ),
                                             engineIndex: i
                                         });
                                     }
                                 }
 
-                                if (appList.activeCategory === "ALL" || appList.activeCategory === "NORMAL") {
-                                    for (let i = 0; i < filteredWallpapers.length; i++) {
+                                if (
+                                    appList.activeCategory === "ALL" ||
+                                    appList.activeCategory === "NORMAL"
+                                ) {
+                                    for (
+                                        let i = 0;
+                                        i <
+                                        filteredWallpapers.length;
+                                        i++
+                                    ) {
                                         items.push({
                                             type: "static",
                                             data: filteredWallpapers[i]
@@ -497,83 +801,176 @@ Variants {
                             ColumnLayout {
                                 Text {
                                     text: "Wallpapers"
+
                                     padding: 8
-                                    color: Colors.palette().text
-                                    anchors.horizontalCenter: parent.horizontalCenter
+
+                                    color:
+                                        Colors.palette().text
+
+                                    anchors.horizontalCenter:
+                                        parent.horizontalCenter
+
                                     font.pixelSize: 17
                                     font.family: "Share Tech Mono"
                                 }
 
                                 ListView {
                                     id: engineList
-                                    implicitWidth: content.width - 10
+
+                                    implicitWidth:
+                                        content.width - 10
+
                                     implicitHeight: 250
-                                    anchors.horizontalCenter: parent.horizontalCenter
+
+                                    anchors.horizontalCenter:
+                                        parent.horizontalCenter
+
                                     clip: true
+
                                     property int selectedIndex: -1
-                                    orientation: ListView.Horizontal
+
+                                    orientation:
+                                        ListView.Horizontal
+
                                     reuseItems: true
+
                                     spacing: 8
                                     flickDeceleration: 2000
 
                                     model: combinedModel
+
                                     delegate: Item {
                                         id: item
+
                                         required property var modelData
                                         required property int index
 
-                                        property bool isEngine: modelData.type === "engine"
+                                        property bool isEngine:
+                                            modelData.type === "engine"
 
-                                        implicitWidth: engineList.selectedIndex == index ? 350 : 300
-                                        implicitHeight: engineList.selectedIndex == index ? 250 : 220
+                                        implicitWidth:
+                                            engineList.selectedIndex === index
+                                                ? 350
+                                                : 300
+
+                                        implicitHeight:
+                                            engineList.selectedIndex === index
+                                                ? 250
+                                                : 220
 
                                         ClippingRectangle {
                                             id: clip
+
                                             property string previewPath
-                                            implicitWidth: parent.width
-                                            implicitHeight: parent.height
+
+                                            implicitWidth:
+                                                parent.width
+
+                                            implicitHeight:
+                                                parent.height
+
                                             radius: 8
+
                                             clip: true
-                                            border.width: engineList.selectedIndex == index ? 1 : 0
-                                            border.color: Colors.palette().crust
+
+                                            border.width:
+                                                engineList.selectedIndex === index
+                                                    ? 1
+                                                    : 0
+
+                                            border.color:
+                                                Colors.palette().crust
+
                                             FolderListModel {
-                                                folder: "file:" + item.modelData.filePath
+                                                folder:
+                                                    "file:" +
+                                                    item.modelData.filePath
+
                                                 showDirs: false
-                                                nameFilters: ["preview.*"]
+
+                                                nameFilters:
+                                                    ["preview.*"]
+
                                                 onStatusChanged: {
-                                                    if (status === FolderListModel.Ready && count > 0)
-                                                        clip.previewPath = get(0, "filePath");
+                                                    if (
+                                                        status ===
+                                                            FolderListModel.Ready &&
+                                                        count > 0
+                                                    ) {
+                                                        clip.previewPath =
+                                                            get(
+                                                                0,
+                                                                "filePath"
+                                                            );
+                                                    }
                                                 }
                                             }
+
                                             AnimatedImage {
-                                                visible: item.isEngine
+                                                visible:
+                                                    item.isEngine
+
                                                 anchors.fill: parent
-                                                source: clip.previewPath
-                                                fillMode: Image.PreserveAspectCrop
-                                                onStatusChanged: playing = (status == AnimatedImage.Ready)
+
+                                                source:
+                                                    clip.previewPath
+
+                                                fillMode:
+                                                    Image.PreserveAspectCrop
+
+                                                onStatusChanged:
+                                                    playing =
+                                                        status ===
+                                                        AnimatedImage.Ready
                                             }
+
                                             Image {
-                                                visible: !item.isEngine
+                                                visible:
+                                                    !item.isEngine
+
                                                 anchors.fill: parent
-                                                source: item.modelData.data.filePath
-                                                fillMode: Image.PreserveAspectCrop
+
+                                                source:
+                                                    item.modelData.data.filePath
+
+                                                fillMode:
+                                                    Image.PreserveAspectCrop
                                             }
+
                                             Text {
                                                 padding: 8
+
                                                 anchors.top: parent.top
                                                 anchors.right: parent.right
+
                                                 font.pixelSize: 20
-                                                color: Colors.palette().text
-                                                text: item.isEngine ? "" : ""
+
+                                                color:
+                                                    Colors.palette().text
+
+                                                text:
+                                                    item.isEngine
+                                                        ? ""
+                                                        : ""
                                             }
+
                                             MouseArea {
                                                 anchors.fill: parent
+
                                                 onClicked: {
-                                                    engineList.selectedIndex = item.index;
+                                                    engineList.selectedIndex =
+                                                        item.index;
+
                                                     if (item.isEngine) {
-                                                        WallpaperManager.setWallpaper(item.modelData.engineIndex, "engine", clip.previewPath);
+                                                        WallpaperManager.setWallpaper(
+                                                            item.modelData.engineIndex,
+                                                            "engine",
+                                                            clip.previewPath
+                                                        );
                                                     } else {
-                                                        WallpaperManager.setWallpaper(item.modelData.data.fileIndex);
+                                                        WallpaperManager.setWallpaper(
+                                                            item.modelData.data.fileIndex
+                                                        );
                                                     }
                                                 }
                                             }
@@ -585,9 +982,9 @@ Variants {
                     }
                 }
 
-                // ── search bar ───────────────────────────────────────────────
                 Rectangle {
                     id: searchBar
+
                     property ListView list
 
                     Layout.fillWidth: true
@@ -597,62 +994,114 @@ Variants {
                     Layout.rightMargin: 10
 
                     radius: 3
-                    color: Colors.palette().mantle
-                    border.color: field.activeFocus ? Colors.palette().crust : Colors.palette().crust
+
+                    color:
+                        Colors.palette().mantle
+
+                    border.color:
+                        field.activeFocus
+                            ? Colors.palette().crust
+                            : Colors.palette().crust
+
                     border.width: 1
 
-                    // top accent when focused
                     Rectangle {
                         visible: field.activeFocus
+
                         anchors.top: parent.top
                         anchors.left: parent.left
                         anchors.right: parent.right
+
                         height: 1
-                        color: Colors.palette().pink
+
+                        color:
+                            Colors.palette().pink
+
                         radius: 0
                     }
 
                     RowLayout {
                         anchors.fill: parent
+
                         anchors.leftMargin: 12
                         anchors.rightMargin: 10
 
                         Text {
                             text: ">_"
+
                             font.family: "Share Tech Mono"
                             font.pixelSize: 13
-                            color: Colors.palette().subtext0
+
+                            color:
+                                Colors.palette().subtext0
+
                             opacity: 0.7
                         }
 
                         TextField {
                             id: field
+
                             Layout.fillWidth: true
+
                             background: null
-                            placeholderText: "search apps... (> for commands)"
+
+                            placeholderText:
+                                "search apps... (> for commands)"
+
                             focus: true
-                            color: Colors.palette().text
-                            placeholderTextColor: Colors.palette().subtext0
-                            font.family: "Share Tech Mono"
+
+                            color:
+                                Colors.palette().text
+
+                            placeholderTextColor:
+                                Colors.palette().subtext0
+
+                            font.family:
+                                "Share Tech Mono"
+
                             font.pixelSize: 13
+
                             cursorVisible: true
                             selectByMouse: true
-                            property var textSplit: field.text.toLowerCase().replace(">", "").split(" ")
+
+                            property var textSplit:
+                                field.text
+                                    .toLowerCase()
+                                    .replace(">", "")
+                                    .split(" ")
 
                             onTextChanged: {
                                 var mode = content.mode;
-                                field.textSplit = field.text.toLowerCase().replace(">", "").split(" ");
-                                if (mode == "apps") {
-                                    appList.customCommands.forEach(command => {
-                                        if (textSplit[0] == command.name.toLowerCase()) {
-                                            content.mode = "wallpaper";
-                                            field.text += " ";
+
+                                field.textSplit =
+                                    field.text
+                                        .toLowerCase()
+                                        .replace(">", "")
+                                        .split(" ");
+
+                                if (mode === "apps") {
+                                    appList.customCommands.forEach(
+                                        command => {
+                                            if (
+                                                textSplit[0] ===
+                                                command.name.toLowerCase()
+                                            ) {
+                                                content.mode = "wallpaper";
+                                                field.text += " ";
+                                            }
                                         }
-                                    });
+                                    );
                                 }
-                                if (mode != "apps" && !field.text.includes(mode + " ")) {
+
+                                if (
+                                    mode !== "apps" &&
+                                    !field.text.includes(
+                                        mode + " "
+                                    )
+                                ) {
                                     content.mode = "apps";
                                     field.text = "";
+                                    appList.activeCategory = "ALL";
                                 }
                             }
 
@@ -669,36 +1118,59 @@ Variants {
                                     event.accepted = true;
                                 }
                             }
-                            Keys.onEscapePressed: field.text = ""
+
+                            Keys.onEscapePressed: {
+                                field.text = "";
+                                appList.activeCategory = "ALL";
+                            }
                         }
 
-                        // result count
                         Text {
                             text: appList.count + " apps"
+
                             font.family: "Share Tech Mono"
                             font.pixelSize: 9
-                            color: Colors.palette().subtext0
+
+                            color:
+                                Colors.palette().subtext0
+
                             font.letterSpacing: 0.4
                         }
 
                         MouseArea {
-                            visible: field.text.length > 0
-                            Layout.alignment: Qt.AlignVCenter
+                            visible:
+                                field.text.length > 0
+
+                            Layout.alignment:
+                                Qt.AlignVCenter
+
                             implicitWidth: 22
                             implicitHeight: 22
-                            cursorShape: Qt.PointingHandCursor
+
+                            cursorShape:
+                                Qt.PointingHandCursor
+
                             Text {
                                 anchors.centerIn: parent
+
                                 text: "✕"
+
                                 font.pixelSize: 14
-                                color: Colors.palette().subtext0
+
+                                color:
+                                    Colors.palette().subtext0
                             }
-                            onClicked: field.clear()
+
+                            onClicked: {
+                                field.clear();
+                                appList.activeCategory = "ALL";
+                            }
                         }
                     }
                 }
 
-                Component.onCompleted: field.forceActiveFocus()
+                Component.onCompleted:
+                    field.forceActiveFocus()
             }
         }
     }

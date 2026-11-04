@@ -226,7 +226,7 @@ Variants {
                     Repeater {
                         model: [
                             {
-                                icon: "",
+                                icon: "󰘳",
                                 label: "terminal",
                                 clicked: () => {
                                     GlobalData.showAppMenu = !GlobalData.showAppMenu;

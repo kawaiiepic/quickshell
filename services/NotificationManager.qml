@@ -64,7 +64,7 @@ Singleton {
                     root.popupNotifications.append(item);
                 }
                 root.historyNotifications.append(item);
-                root.playNotificationSound();
+                // root.playNotificationSound();
             }
         }
     }

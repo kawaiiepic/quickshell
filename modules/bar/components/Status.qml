@@ -1,11 +1,12 @@
 pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Services.UPower
 import QtQuick.Controls
-import Quickshell.Services.Pipewire
 import Quickshell
 import Quickshell.Widgets
+import Quickshell.Services.UPower
+import Quickshell.Services.Pipewire
 import Quickshell.Networking
 import Quickshell.Bluetooth
 import Qt5Compat.GraphicalEffects
@@ -20,640 +21,1104 @@ Rectangle {
     property ShellScreen screen
 
     width: parent.width
-    height: childrenRect.height
+    height: layout.implicitHeight + 10
     color: Colors.palette().surface1
     radius: 10
 
-    Column {
-        Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
-        anchors.horizontalCenter: parent.horizontalCenter
+    // ============================================================
+    // HELPERS
+    // ============================================================
 
-        Item {
-            height: 5
-            width: 1
+    function dim(c, a) {
+        return Qt.rgba(c.r, c.g, c.b, a)
+    }
+
+    function fmtSeconds(secs) {
+        if (!secs || secs <= 0)
+            return "--"
+
+        const h = Math.floor(secs / 3600)
+        const m = Math.floor((secs % 3600) / 60)
+
+        return h > 0 ? h + "h " + m + "m" : m + "m"
+    }
+
+    function volumeIcon(vol, muted) {
+        if (muted || vol <= 0)
+            return "󰖁"
+        if (vol < 0.34)
+            return "󰕿"
+        if (vol < 0.67)
+            return "󰖀"
+        return "󰕾"
+    }
+
+    function btIcon(name) {
+        switch (name) {
+        case "audio-headset":
+            return "󰋎"
+        case "audio-headphones":
+            return "󰋋"
+        case "audio-card":
+            return "󰓃"
+        case "phone":
+            return "\uf10b"
+        case "input-gaming":
+            return "󰊴"
+        case "input-keyboard":
+            return "󰌌"
+        case "input-mouse":
+            return "󰍽"
+        default:
+            return "󰂯"
+        }
+    }
+
+    function profileIcon(p) {
+        switch (p) {
+        case PowerProfile.PowerSaver:
+            return "󰌪"
+        case PowerProfile.Performance:
+            return "󱐋"
+        default:
+            return "󰗑"
+        }
+    }
+
+    // Default audio devices (bound so volume/mute are readable and writable)
+    readonly property var sink: Pipewire.defaultAudioSink
+    readonly property var source: Pipewire.defaultAudioSource
+
+    PwObjectTracker {
+        objects: Pipewire.nodes.values
+    }
+
+    // ============================================================
+    // SMALL REUSABLE COMPONENTS
+    // ============================================================
+
+    component PopupText: Text {
+        color: Colors.palette().text
+        font.pixelSize: 12
+    }
+
+    component SwitchRow: RowLayout {
+        id: sr
+
+        property string text
+        property bool checked: false
+
+        signal toggled(bool value)
+
+        spacing: 8
+
+        Text {
+            text: sr.text
+            color: Colors.palette().text
+            font.pixelSize: 12
+            Layout.fillWidth: true
         }
 
-        ColumnLayout {
-            id: layout
-            spacing: 5
-            Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
-            anchors.horizontalCenter: parent.horizontalCenter
+        Switch {
+            checked: sr.checked
+            onToggled: sr.toggled(checked)
+        }
+    }
 
-            Text {
-                id: wifi
+    component VolumeRow: RowLayout {
+        id: vr
 
-                text: ""
-                Layout.alignment: Qt.AlignHCenter
-                color: popup.show ? Colors.palette().pink : Colors.palette().text
-                font.pixelSize: 14
+        required property var node
+        property string icon: ""
 
-                BasePopup {
-                    id: popup
+        readonly property var audio: vr.node ? vr.node.audio : null
+        readonly property real vol: vr.audio ? vr.audio.volume : 0
+        readonly property bool muted: vr.audio ? vr.audio.muted : false
 
-                    parentItem: wifi
-                    screen: root.screen
+        spacing: 8
+
+        Text {
+            text: vr.icon
+            color: vr.muted ? Colors.palette().subtext0 : Colors.palette().text
+            font.pixelSize: 16
+            Layout.preferredWidth: 20
+            horizontalAlignment: Text.AlignHCenter
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    if (vr.audio)
+                        vr.audio.muted = !vr.audio.muted
+                }
+            }
+        }
+
+        Slider {
+            Layout.fillWidth: true
+            from: 0
+            to: 1
+            enabled: vr.audio !== null
+            value: vr.vol
+
+            onMoved: {
+                if (vr.audio)
+                    vr.audio.volume = value
+            }
+        }
+
+        Text {
+            text: Math.round(vr.vol * 100) + "%"
+            color: Colors.palette().subtext0
+            font.pixelSize: 11
+            Layout.preferredWidth: 34
+            horizontalAlignment: Text.AlignRight
+        }
+    }
+
+    // ============================================================
+    // ICON COLUMN
+    // ============================================================
+
+    ColumnLayout {
+        id: layout
+
+        y: 5
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: 5
+
+        // ========================================================
+        // WI-FI
+        // ========================================================
+
+        Text {
+            id: wifi
+
+            text: Networking.wifiEnabled ? "󰖩" : "󰖪"
+            Layout.alignment: Qt.AlignHCenter
+            color: popup.show ? Colors.palette().pink : Colors.palette().text
+            font.pixelSize: 14
+
+            BasePopup {
+                id: popup
+
+                parentItem: wifi
+                screen: root.screen
+
+                ColumnLayout {
+                    spacing: 8
+                    implicitWidth: 340
+
+                    SwitchRow {
+                        Layout.fillWidth: true
+                        text: "Wi-Fi"
+                        checked: Networking.wifiEnabled
+                        onToggled: value => Networking.wifiEnabled = value
+                    }
 
                     Repeater {
                         model: Networking.devices
 
                         delegate: Item {
                             id: item
+
                             required property NetworkDevice modelData
 
-                            height: childrenRect.height
-                            width: childrenRect.width
+                            Layout.fillWidth: true
+                            implicitHeight: loader.implicitHeight
+                            implicitWidth: loader.implicitWidth
 
                             Loader {
+                                id: loader
+                                width: parent.width
                                 sourceComponent: item.modelData.type === DeviceType.Wired ? wiredDevice : wirelessDevice
                             }
 
+                            // ---------- Ethernet ----------
                             Component {
                                 id: wiredDevice
 
-                                Row {
-                                    Text {
-                                        text: "ethernet"
-                                        color: Colors.palette().text
-                                    }
+                                RowLayout {
+                                    spacing: 8
 
                                     Text {
-                                        text: "hasLink: " + item.modelData.hasLink
-                                        color: Colors.palette().text
+                                        text: "󰈀"
+                                        font.pixelSize: 16
+                                        color: item.modelData.hasLink ? Colors.palette().pink : Colors.palette().subtext0
                                     }
 
-                                    Text {
-                                        text: "linkSpeed: " + item.modelData.linkSpeed
-                                        color: Colors.palette().text
+                                    PopupText {
+                                        text: "Ethernet"
+                                        Layout.fillWidth: true
+                                    }
+
+                                    PopupText {
+                                        color: Colors.palette().subtext0
+                                        text: item.modelData.hasLink ? (item.modelData.linkSpeed > 0 ? item.modelData.linkSpeed + " Mbit/s" : "Connected") : "No cable"
                                     }
                                 }
                             }
 
+                            // ---------- Wi-Fi ----------
                             Component {
                                 id: wirelessDevice
 
-                                Column {
+                                ColumnLayout {
                                     spacing: 8
 
-                                    // Text {
-                                    //     text: item.modelData.connected ? item.modelData.networks.values[0].name : "Not Connected"
-                                    //     color: Colors.palette().text
-                                    // }
-
-                                    Switch {
+                                    SwitchRow {
+                                        Layout.fillWidth: true
+                                        text: "Scan for networks"
                                         checked: item.modelData.scannerEnabled
-                                        onToggled: item.modelData.scannerEnabled = checked
+                                        onToggled: value => item.modelData.scannerEnabled = value
                                     }
 
-                                    Text {
-                                        text: WifiDeviceMode.toString(item.modelData.mode)
-                                        color: Colors.palette().text
-                                    }
+                                    Item {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 220
 
-                                    ScrollView {
-                                        height: 200
-                                        width: 500
-                                        clip: true
-                                        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                                        ScrollView {
+                                            anchors.fill: parent
+                                            clip: true
+                                            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
-                                        ListView {
-                                            model: item.modelData.networks
-                                            spacing: 0
+                                            ListView {
+                                                id: netList
 
-                                            delegate: ItemDelegate {
-                                                required property Network modelData
-                                                required property int index
+                                                model: item.modelData.networks
+                                                spacing: 0
 
-                                                width: ListView.view.width
-                                                height: 56
-                                                padding: 0
+                                                delegate: ItemDelegate {
+                                                    id: net
 
-                                                // ── Background + divider ───────────────────────────────────────
-                                                background: Rectangle {
-                                                    color: parent.hovered ? Qt.rgba(255, 255, 255, 0.05) : "transparent"
-                                                    Behavior on color {
-                                                        ColorAnimation {
-                                                            duration: 120
+                                                    required property Network modelData
+                                                    required property int index
+
+                                                    width: ListView.view.width
+                                                    height: 52
+
+                                                    leftPadding: 12
+                                                    rightPadding: 12
+                                                    topPadding: 0
+                                                    bottomPadding: 0
+
+                                                    // left click: connect / disconnect
+                                                    onClicked: {
+                                                        if (net.modelData.connected)
+                                                            net.modelData.disconnect()
+                                                        else
+                                                            net.modelData.connect()
+                                                    }
+
+                                                    // right click: forget saved network
+                                                    TapHandler {
+                                                        acceptedButtons: Qt.RightButton
+                                                        onTapped: {
+                                                            if (net.modelData.known)
+                                                                net.modelData.forget()
                                                         }
                                                     }
-                                                }
 
-                                                // ── Content row ────────────────────────────────────────────────
-                                                contentItem: RowLayout {
-                                                    anchors {
-                                                        fill: parent
-                                                        leftMargin: 16
-                                                        rightMargin: 16
+                                                    background: Rectangle {
+                                                        radius: 6
+                                                        color: net.hovered ? root.dim(Colors.palette().text, 0.06) : "transparent"
+
+                                                        Behavior on color {
+                                                            ColorAnimation {
+                                                                duration: 120
+                                                            }
+                                                        }
                                                     }
-                                                    spacing: 12
 
-                                                    // Signal strength bars
-                                                    Row {
-                                                        spacing: 3
-                                                        Layout.alignment: Qt.AlignVCenter
+                                                    contentItem: RowLayout {
+                                                        spacing: 12
 
-                                                        Repeater {
-                                                            model: 4
-                                                            Rectangle {
+                                                        // Signal bars
+                                                        Row {
+                                                            spacing: 2
+                                                            Layout.alignment: Qt.AlignVCenter
 
-                                                                required property int index
+                                                            Repeater {
+                                                                model: 4
 
-                                                                width: 4
-                                                                height: 4 * index + 1
-                                                                anchors.bottom: parent?.bottom
-                                                                radius: 2
+                                                                delegate: Item {
+                                                                    id: bar
 
-                                                                color: (modelData.signalStrength / index) > 0.25 ? "blue" : "grey"
+                                                                    required property int index
 
-                                                                Behavior on color {
-                                                                    ColorAnimation {
-                                                                        duration: 180
+                                                                    width: 4
+                                                                    height: 16
+
+                                                                    Rectangle {
+                                                                        anchors.bottom: parent.bottom
+                                                                        width: parent.width
+                                                                        height: 4 + bar.index * 4
+                                                                        radius: 1
+
+                                                                        color: net.modelData.signalStrength > bar.index * 0.25 + 0.05 ? Colors.palette().pink : root.dim(Colors.palette().text, 0.25)
+
+                                                                        Behavior on color {
+                                                                            ColorAnimation {
+                                                                                duration: 180
+                                                                            }
+                                                                        }
                                                                     }
                                                                 }
                                                             }
                                                         }
-                                                    }
 
-                                                    // Network name + status label
-                                                    ColumnLayout {
-                                                        Layout.fillWidth: true
-                                                        spacing: 2
-
-                                                        Text {
-                                                            text: modelData.name
-                                                            font.pixelSize: 14
-                                                            font.weight: modelData.connected ? Font.Medium : Font.Normal
-                                                            color: Colors.palette().text
-                                                            elide: Text.ElideRight
+                                                        // Name + status
+                                                        ColumnLayout {
                                                             Layout.fillWidth: true
-                                                        }
+                                                            spacing: 2
 
-                                                        Text {
-                                                            text: modelData.stateChanging ? ConnectionState.toString(modelData.state) + "…" : ConnectionState.toString(modelData.state)
-                                                            font.pixelSize: 11
-                                                            color: {
-                                                                if (modelData.stateChanging)
-                                                                    return "#fbbf24";  // amber — in progress
-                                                                if (modelData.connected)
-                                                                    return "#4ade80";  // green  — connected
-                                                                return Qt.rgba(Colors.palette().text.r, Colors.palette().text.g, Colors.palette().text.b, 0.45);
+                                                            Text {
+                                                                text: net.modelData.name
+                                                                font.pixelSize: 14
+                                                                font.weight: net.modelData.connected ? Font.Medium : Font.Normal
+                                                                color: Colors.palette().text
+                                                                elide: Text.ElideRight
+                                                                Layout.fillWidth: true
                                                             }
-                                                            Behavior on color {
-                                                                ColorAnimation {
-                                                                    duration: 180
+
+                                                            Text {
+                                                                text: net.modelData.stateChanging ? ConnectionState.toString(net.modelData.state) + "…" : ConnectionState.toString(net.modelData.state)
+                                                                font.pixelSize: 11
+                                                                color: {
+                                                                    if (net.modelData.stateChanging)
+                                                                        return "#fbbf24"
+                                                                    if (net.modelData.connected)
+                                                                        return "#4ade80"
+                                                                    return root.dim(Colors.palette().text, 0.45)
                                                                 }
                                                             }
                                                         }
-                                                    }
 
-                                                    // "Connected" pill badge
-                                                    Rectangle {
-                                                        visible: modelData.connected
-                                                        width: badge.implicitWidth + 16
-                                                        height: 20
-                                                        radius: 10
-                                                        color: Qt.rgba(74, 222, 128, 0.12)
-                                                        border {
-                                                            color: Qt.rgba(74, 222, 128, 0.35)
-                                                            width: 1
-                                                        }
-
+                                                        // Saved-network star
                                                         Text {
-                                                            id: badge
-                                                            anchors.centerIn: parent
-                                                            text: "Connected"
-                                                            font.pixelSize: 10
-                                                            font.weight: Font.Medium
-                                                            color: "#4ade80"
+                                                            visible: net.modelData.known && !net.modelData.connected
+                                                            text: "★"
+                                                            font.pixelSize: 13
+                                                            color: root.dim(Colors.palette().text, 0.3)
+                                                            Layout.alignment: Qt.AlignVCenter
                                                         }
                                                     }
-
-                                                    // Saved-network star (only when not connected)
-                                                    Text {
-                                                        visible: modelData.known && !modelData.connected
-                                                        text: "★"
-                                                        font.pixelSize: 13
-                                                        color: Qt.rgba(Colors.palette().text.r, Colors.palette().text.g, Colors.palette().text.b, 0.3)
-                                                        Layout.alignment: Qt.AlignVCenter
-                                                    }
                                                 }
                                             }
                                         }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            Text {
-                id: bluetooth
-                text: "󰂯"
-                Layout.alignment: Qt.AlignHCenter
-                color: popup2.show ? Colors.palette().pink : Colors.palette().text
-                font.pixelSize: 14
-
-                BasePopup {
-                    id: popup2
-
-                    parentItem: bluetooth
-                    screen: root.screen
-
-                    Column {
-
-                        Switch {
-                            checked: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.discovering : false
-
-                            onToggled: {
-                                if (Bluetooth.defaultAdapter)
-                                    Bluetooth.defaultAdapter.discovering = checked;
-                            }
-                        }
-
-                        Switch {
-                            checked: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.pairable : false
-
-                            onToggled: {
-                                if (Bluetooth.defaultAdapter)
-                                    Bluetooth.defaultAdapter.pairable = checked;
-                            }
-                        }
-
-                        ScrollView {
-                            height: 200
-                            width: 500
-                            clip: true
-
-                            ListView {
-                                model: Bluetooth.devices
-                                spacing: 0
-
-                                delegate: Item {
-
-                                    required property var modelData
-
-                                    height: 25
-                                    width: childrenRect.width
-
-                                    MouseArea {
-                                        id: mouse
-                                        anchors.fill: parent
-
-                                        acceptedButtons: Qt.LeftButton | Qt.RightButton
-
-                                        onClicked: mouse => {
-                                            if (mouse.button & Qt.LeftButton) {
-                                                if (modelData.paired) {
-                                                    if (modelData.connected) {
-                                                        modelData.disconnect();
-                                                    } else {
-                                                        modelData.trusted = true;
-                                                        modelData.connect();
-                                                    }
-                                                } else {
-                                                    modelData.pair();
-                                                    modelData.trusted = true;
-                                                }
-                                            } else {
-                                                modelData.forget();
-                                            }
-                                        }
-                                    }
-
-                                    HoverHandler {
-                                        id: hover
-                                    }
-
-                                    Row {
-                                        spacing: 8
 
                                         Text {
-                                            visible: modelData.paired
-                                            text: {
-                                                if (modelData.icon == "audio-headset")
-                                                    "󰋎";
-                                                else if (modelData.icon == "audio-headphones")
-                                                    "󰋋";
-                                                else if (modelData.icon == "phone")
-                                                    "";
-                                                else if (modelData.icon == "input-gaming")
-                                                    "󰊴";
-                                                else
-                                                    modelData.icon;
-                                            }
-                                            color: hover.hovered ? Colors.palette().maroon : modelData.connected ? Colors.palette().pink : Colors.palette().text
+                                            anchors.centerIn: parent
+                                            visible: netList.count === 0
+                                            text: "No networks found"
+                                            color: Colors.palette().subtext0
+                                            font.pixelSize: 12
                                         }
+                                    }
 
-                                        Text {
-                                            text: modelData.name
-                                            color: hover.hovered ? Colors.palette().maroon : modelData.connected ? Colors.palette().pink : Colors.palette().text
-                                        }
-
-                                        Text {
-                                            visible: modelData.paired
-                                            text: ""
-                                            color: hover.hovered ? Colors.palette().maroon : modelData.connected ? Colors.palette().pink : Colors.palette().text
-                                            font.pixelSize: 10
-                                        }
-
-                                        BusyIndicator {
-                                            visible: modelData.state == 3
-                                            implicitWidth: 25
-                                            implicitHeight: 25
-
-                                            y: -5
-
-                                            layer.enabled: true
-                                            layer.effect: ColorOverlay {
-                                                antialiasing: true
-                                                color: "#D8D8D8" //change it to your prefer color
-                                            }
-                                        }
+                                    PopupText {
+                                        text: "Click to connect · right-click to forget"
+                                        color: Colors.palette().subtext0
+                                        font.pixelSize: 10
                                     }
                                 }
                             }
                         }
-                    }
-                }
-            }
-
-            Text {
-                id: volume
-                text: "󰕾"
-                Layout.alignment: Qt.AlignHCenter
-                color: basePopup.show ? Colors.palette().pink : Colors.palette().text
-                font.pixelSize: 14
-
-                BasePopup {
-                    id: basePopup
-                    parentItem: volume
-                    screen: root.screen
-
-                    property int selectedIndex: 0
-
-                    StackView {
-                        id: stack
-                        implicitWidth: currentItem ? currentItem.implicitWidth : 0
-                        implicitHeight: currentItem ? currentItem.implicitHeight : 0
-                        initialItem: base
-                    }
-
-                    Component {
-                        id: base
-
-                        ColumnLayout {
-                            spacing: 8
-
-                            Layout.fillHeight: true
-
-                            Text {
-                                text: "Audio Profile"
-                                color: Colors.palette().text
-                            }
-
-                            Text {
-                                text: "Select Audio Output"
-                                color: Colors.palette().text
-                            }
-
-                            PopupButton {
-                                menu: true
-                                text: Pipewire.defaultAudioSink && Pipewire.defaultAudioSink.description ? Pipewire.defaultAudioSink.description : "Select Output"
-
-                                clicked: function () {
-                                    stack.push(audioInDepth);
-                                    basePopup.hoverUpdate(1);
-                                }
-                            }
-                        }
-                    }
-
-                    Component {
-                        id: audioInDepth
-
-                        ColumnLayout {
-                            spacing: 10
-
-                            ButtonGroup {
-                                id: buttonGroup
-                            }
-
-                            Repeater {
-                                id: nodesRepeater
-                                model: Pipewire.nodes
-
-                                delegate: Item {
-                                    id: node
-
-                                    required property PwNode modelData
-                                    property bool isAudio: !modelData.isStream && modelData.isSink
-
-                                    implicitHeight: 20
-                                    implicitWidth: 200
-
-                                    visible: isAudio
-
-                                    RadioButton {
-                                        id: control
-                                        ButtonGroup.group: buttonGroup
-
-                                        checked: (Pipewire.defaultAudioSink.name === node.modelData.name) && node.isAudio
-
-                                        onHoveredChanged: {
-                                            basePopup.hoverUpdate(hovered ? 1 : -1);
-                                        }
-
-                                        onClicked: {
-                                            Pipewire.preferredDefaultAudioSink = node.modelData;
-                                        }
-
-                                        contentItem: Text {
-                                            rightPadding: control.indicator.width + control.spacing
-                                            text: node.modelData.nickname
-                                            opacity: enabled ? 1.0 : 0.3
-                                            color: control.down ? Colors.palette().pink : Colors.palette().text
-                                            elide: Text.ElideRight
-                                            verticalAlignment: Text.AlignVCenter
-                                        }
-
-                                        indicator: Rectangle {
-                                            implicitWidth: 12
-                                            implicitHeight: 12
-                                            x: control.width - width - control.rightPadding
-                                            y: parent.height / 2 - height / 2
-                                            radius: 13
-                                            color: "transparent"
-                                            border.color: control.down ? Colors.palette().pink : Colors.palette().pink
-
-                                            Rectangle {
-                                                width: 11
-                                                height: 11
-                                                radius: 13
-                                                x: 0.5
-                                                y: 0.5
-                                                color: control.down ? Colors.palette().pink : Colors.palette().pink
-                                                visible: control.checked
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            BackButton {
-                                clicked: function () {
-                                    stack.popCurrentItem();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            Text {
-                id: notification
-                text: NotificationManager.urgent ? "󰵙" : NotificationManager.historyNotifications.count > 0 ? "󱅫" : "󰂚"
-                font.pixelSize: 14
-                Layout.alignment: Qt.AlignHCenter
-                color: notificationPopup.show ? Colors.palette().pink : Colors.palette().text
-
-                BasePopup {
-                    id: notificationPopup
-                    parentItem: notification
-                    screen: root.screen
-
-                    Text {
-                        text: `Number of notifications ${NotificationManager.historyNotifications.count}`
-                        color: Colors.palette().text
-                    }
-                }
-            }
-
-            Text {
-                id: power_profile
-
-                text: ""
-                color: powerPopup.show ? Colors.palette().pink : Colors.palette().text
-                font.pixelSize: 14
-
-                Layout.alignment: Qt.AlignHCenter
-
-                BasePopup {
-                    id: powerPopup
-                    parentItem: power_profile
-                    screen: root.screen
-
-                    Text {
-                        text: PowerProfiles.hasPerformanceProfile
-                        color: Colors.palette().text
-                    }
-
-                    Text {
-                        text: PowerProfile.toString(PowerProfiles.profile)
-                        color: Colors.palette().text
-                    }
-
-                    Text {
-                        text: PowerProfiles.holds.length
-                        color: Colors.palette().text
-                    }
-                }
-            }
-
-            Row {
-                id: battery
-
-                property UPowerDevice power: UPower.displayDevice
-
-                function updateP() {
-                    console.log(`Percentage changed ${power.percentage}`);
-                    switch (power.percentage * 100) {
-                    case 5:
-                        {
-                            NotificationManager.sendNotification("battery", "Battery Status", "Shutting off soon 5%");
-                            break;
-                        }
-                    case 20:
-                        {
-                            NotificationManager.sendNotification("battery", "Battery Status", "Low Battery 20%");
-                            break;
-                        }
-                    case 80:
-                        {
-                            NotificationManager.sendNotification("battery", "Battery Status", "Almost Full 80%");
-                            break;
-                        }
-                    case 100:
-                        {
-                            NotificationManager.sendNotification("battery", "Battery Status", "Fully charged 100%");
-                            break;
-                        }
-                    }
-                }
-
-                Component.onCompleted: {
-                    power.onPercentageChanged.connect(updateP);
-                }
-
-                visible: power.isLaptopBattery ?? false
-                Layout.alignment: Qt.AlignHCenter
-
-                Item {
-                    width: 18
-                    height: 18
-
-                    IconImage {
-                        anchors.fill: parent
-                        source: Quickshell.iconPath(battery.power.iconName, "unknown")
-                        mipmap: true
-                        rotation: 90
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: Math.round(battery.power.percentage * 100)
-                        font.pixelSize: 11
-                        color: "black"
-                    }
-                }
-
-                BasePopup {
-                    id: batteryPopup
-
-                    function formatSeconds(secs) {
-                        var hours = Math.floor(secs / 3600); // 1 hour = 3600 seconds
-                        var minutes = Math.floor((secs % 3600) / 60);
-                        var seconds = secs % 60;
-                        // Pad with leading zeros if needed
-                        var hoursStr = hours < 10 ? "0" + hours : hours;
-                        var minutesStr = minutes < 10 ? "0" + minutes : minutes;
-                        var secondsStr = seconds < 10 ? "0" + seconds : seconds;
-                        return hoursStr + ":" + minutesStr + ":" + secondsStr;
-                    }
-
-                    parentItem: battery
-                    screen: root.screen
-
-                    Text {
-                        text: "Battery Percentage " + battery.power.percentage * 100 + "%"
-                        color: Colors.palette().text
-                    }
-
-                    Text {
-                        text: "Time till dead " + batteryPopup.formatSeconds(battery.power.timeToEmpty)
-                        color: Colors.palette().text
-                    }
-
-                    Text {
-                        text: "Time till charged " + batteryPopup.formatSeconds(battery.power.timeToFull)
-                        color: Colors.palette().text
                     }
                 }
             }
         }
 
-        Item {
-            height: 5
-            width: 1
+        // ========================================================
+        // BLUETOOTH
+        // ========================================================
+
+        Text {
+            id: bluetooth
+
+            text: (Bluetooth.defaultAdapter && Bluetooth.defaultAdapter.enabled) ? "󰂯" : "󰂲"
+            Layout.alignment: Qt.AlignHCenter
+            color: popup2.show ? Colors.palette().pink : Colors.palette().text
+            font.pixelSize: 14
+
+            BasePopup {
+                id: popup2
+
+                parentItem: bluetooth
+                screen: root.screen
+
+                ColumnLayout {
+                    spacing: 8
+                    implicitWidth: 340
+
+                    SwitchRow {
+                        Layout.fillWidth: true
+                        text: "Bluetooth"
+                        checked: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
+                        onToggled: value => {
+                            if (Bluetooth.defaultAdapter)
+                                Bluetooth.defaultAdapter.enabled = value
+                        }
+                    }
+
+                    SwitchRow {
+                        Layout.fillWidth: true
+                        visible: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
+                        text: "Scan for devices"
+                        checked: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.discovering : false
+                        onToggled: value => {
+                            if (Bluetooth.defaultAdapter)
+                                Bluetooth.defaultAdapter.discovering = value
+                        }
+                    }
+
+                    SwitchRow {
+                        Layout.fillWidth: true
+                        visible: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
+                        text: "Pairable"
+                        checked: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.pairable : false
+                        onToggled: value => {
+                            if (Bluetooth.defaultAdapter)
+                                Bluetooth.defaultAdapter.pairable = value
+                        }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 220
+                        visible: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
+
+                        ScrollView {
+                            anchors.fill: parent
+                            clip: true
+                            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+                            ListView {
+                                id: btList
+
+                                model: Bluetooth.devices
+                                spacing: 0
+
+                                delegate: Item {
+                                    id: dev
+
+                                    required property var modelData
+
+                                    readonly property bool busy: dev.modelData.state === BluetoothDeviceState.Connecting || dev.modelData.pairing === true
+
+                                    width: ListView.view.width
+                                    height: dev.modelData.name ? 28 : 0
+                                    visible: dev.modelData.name ? true : false
+
+                                    HoverHandler {
+                                        id: hover
+                                    }
+
+                                    // left click: pair / connect / disconnect
+                                    TapHandler {
+                                        acceptedButtons: Qt.LeftButton
+                                        onTapped: {
+                                            if (dev.modelData.paired) {
+                                                if (dev.modelData.connected) {
+                                                    dev.modelData.disconnect()
+                                                } else {
+                                                    dev.modelData.trusted = true
+                                                    dev.modelData.connect()
+                                                }
+                                            } else {
+                                                dev.modelData.pair()
+                                                dev.modelData.trusted = true
+                                            }
+                                        }
+                                    }
+
+                                    // right click: forget
+                                    TapHandler {
+                                        acceptedButtons: Qt.RightButton
+                                        onTapped: {
+                                            if (dev.modelData.paired)
+                                                dev.modelData.forget()
+                                        }
+                                    }
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 4
+                                        anchors.rightMargin: 4
+                                        spacing: 8
+                                        opacity: dev.modelData.paired ? 1.0 : 0.6
+
+                                        readonly property color fg: hover.hovered ? Colors.palette().maroon : dev.modelData.connected ? Colors.palette().pink : Colors.palette().text
+
+                                        Text {
+                                            text: root.btIcon(dev.modelData.icon)
+                                            color: parent.fg
+                                            font.pixelSize: 14
+                                        }
+
+                                        Text {
+                                            text: dev.modelData.name
+                                            color: parent.fg
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+
+                                        Text {
+                                            visible: dev.modelData.connected && dev.modelData.batteryAvailable
+                                            text: Math.round(dev.modelData.battery * 100) + "%"
+                                            color: Colors.palette().subtext0
+                                            font.pixelSize: 11
+                                        }
+
+                                        BusyIndicator {
+                                            visible: dev.busy
+                                            running: dev.busy
+                                            implicitWidth: 22
+                                            implicitHeight: 22
+
+                                            layer.enabled: true
+                                            layer.effect: ColorOverlay {
+                                                antialiasing: true
+                                                color: "#D8D8D8"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            visible: btList.count === 0
+                            text: "No devices"
+                            color: Colors.palette().subtext0
+                            font.pixelSize: 12
+                        }
+                    }
+
+                    PopupText {
+                        text: "Click to connect · right-click to forget"
+                        color: Colors.palette().subtext0
+                        font.pixelSize: 10
+                    }
+                }
+            }
+        }
+
+        // ========================================================
+        // VOLUME
+        // ========================================================
+
+        Text {
+            id: volume
+
+            text: root.volumeIcon(root.sink && root.sink.audio ? root.sink.audio.volume : 0, root.sink && root.sink.audio ? root.sink.audio.muted : false)
+            Layout.alignment: Qt.AlignHCenter
+            color: basePopup.show ? Colors.palette().pink : Colors.palette().text
+            font.pixelSize: 14
+
+            // scroll to change volume
+            WheelHandler {
+                onWheel: event => {
+                    const a = root.sink ? root.sink.audio : null
+                    if (!a)
+                        return
+                    const step = event.angleDelta.y > 0 ? 0.05 : -0.05
+                    a.volume = Math.max(0, Math.min(1, a.volume + step))
+                }
+            }
+
+            // middle click to mute
+            TapHandler {
+                acceptedButtons: Qt.MiddleButton
+                onTapped: {
+                    const a = root.sink ? root.sink.audio : null
+                    if (a)
+                        a.muted = !a.muted
+                }
+            }
+
+            BasePopup {
+                id: basePopup
+
+                parentItem: volume
+                screen: root.screen
+
+                StackView {
+                    id: stack
+
+                    implicitWidth: currentItem ? currentItem.implicitWidth : 0
+                    implicitHeight: currentItem ? currentItem.implicitHeight : 0
+                    initialItem: volumeBase
+                }
+
+                // ---------- Main page ----------
+                Component {
+                    id: volumeBase
+
+                    ColumnLayout {
+                        spacing: 8
+                        implicitWidth: 300
+
+                        PopupText {
+                            text: "Output"
+                            font.bold: true
+                        }
+
+                        VolumeRow {
+                            Layout.fillWidth: true
+                            node: root.sink
+                            icon: root.volumeIcon(root.sink && root.sink.audio ? root.sink.audio.volume : 0, root.sink && root.sink.audio ? root.sink.audio.muted : false)
+                        }
+
+                        PopupButton {
+                            menu: true
+                            text: root.sink && root.sink.description ? root.sink.description : "Select Output"
+
+                            clicked: function () {
+                                stack.push(devicePage, {
+                                    isOutput: true
+                                });
+                                basePopup.hoverUpdate(1);
+                            }
+                        }
+
+                        PopupText {
+                            text: "Input"
+                            font.bold: true
+                        }
+
+                        VolumeRow {
+                            Layout.fillWidth: true
+                            node: root.source
+                            icon: root.source && root.source.audio && root.source.audio.muted ? "󰍭" : "󰍬"
+                        }
+
+                        PopupButton {
+                            menu: true
+                            text: root.source && root.source.description ? root.source.description : "Select Input"
+
+                            clicked: function () {
+                                stack.push(devicePage, {
+                                    isOutput: false
+                                });
+                                basePopup.hoverUpdate(1);
+                            }
+                        }
+                    }
+                }
+
+                // ---------- Device picker (output or input) ----------
+                Component {
+                    id: devicePage
+
+                    ColumnLayout {
+                        id: page
+
+                        property bool isOutput: true
+
+                        spacing: 10
+                        implicitWidth: 300
+
+                        ButtonGroup {
+                            id: buttonGroup
+                        }
+
+                        PopupText {
+                            text: page.isOutput ? "Select Output" : "Select Input"
+                            font.bold: true
+                        }
+
+                        Repeater {
+                            model: Pipewire.nodes
+
+                            delegate: Item {
+                                id: node
+
+                                required property PwNode modelData
+
+                                readonly property bool isMatch: node.modelData && !node.modelData.isStream && (page.isOutput ? node.modelData.isSink : (!node.modelData.isSink && node.modelData.audio !== null))
+
+                                readonly property var current: page.isOutput ? root.sink : root.source
+
+                                Layout.fillWidth: true
+                                implicitHeight: 22
+                                implicitWidth: 200
+
+                                visible: isMatch
+
+                                RadioButton {
+                                    id: control
+
+                                    anchors.fill: parent
+                                    ButtonGroup.group: buttonGroup
+
+                                    checked: node.isMatch && node.current !== null && node.current.name === node.modelData.name
+
+                                    onHoveredChanged: {
+                                        basePopup.hoverUpdate(hovered ? 1 : -1);
+                                    }
+
+                                    onClicked: {
+                                        if (page.isOutput)
+                                            Pipewire.preferredDefaultAudioSink = node.modelData;
+                                        else
+                                            Pipewire.preferredDefaultAudioSource = node.modelData;
+                                    }
+
+                                    contentItem: Text {
+                                        rightPadding: control.indicator.width + control.spacing
+                                        text: node.modelData.nickname || node.modelData.description || node.modelData.name
+                                        opacity: enabled ? 1.0 : 0.3
+                                        color: control.down ? Colors.palette().pink : Colors.palette().text
+                                        elide: Text.ElideRight
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+
+                                    indicator: Rectangle {
+                                        implicitWidth: 12
+                                        implicitHeight: 12
+                                        x: control.width - width - control.rightPadding
+                                        y: parent.height / 2 - height / 2
+                                        radius: 13
+                                        color: "transparent"
+                                        border.color: Colors.palette().pink
+
+                                        Rectangle {
+                                            width: 11
+                                            height: 11
+                                            radius: 13
+                                            x: 0.5
+                                            y: 0.5
+                                            color: Colors.palette().pink
+                                            visible: control.checked
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        BackButton {
+                            clicked: function () {
+                                stack.popCurrentItem();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ========================================================
+        // NOTIFICATIONS
+        // NOTE: the list below assumes the history model exposes
+        // appName / summary / body. Adjust to your NotificationManager.
+        // ========================================================
+
+        Text {
+            id: notification
+
+            text: NotificationManager.urgent ? "󰵙" : NotificationManager.historyNotifications.count > 0 ? "󱅫" : "󰂚"
+            font.pixelSize: 14
+            Layout.alignment: Qt.AlignHCenter
+            color: notificationPopup.show ? Colors.palette().pink : Colors.palette().text
+
+            BasePopup {
+                id: notificationPopup
+
+                parentItem: notification
+                screen: root.screen
+
+                ColumnLayout {
+                    spacing: 8
+                    implicitWidth: 320
+
+                    PopupText {
+                        text: "Notifications (" + NotificationManager.historyNotifications.count + ")"
+                        font.bold: true
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 220
+
+                        ScrollView {
+                            anchors.fill: parent
+                            clip: true
+                            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+                            ListView {
+                                id: notifList
+
+                                model: NotificationManager.historyNotifications
+                                spacing: 6
+
+                                delegate: Rectangle {
+                                    id: notif
+
+                                    required property var model
+
+                                    readonly property var n: notif.model.modelData !== undefined ? notif.model.modelData : notif.model
+
+                                    width: ListView.view.width
+                                    height: notifCol.implicitHeight + 12
+                                    radius: 6
+                                    color: root.dim(Colors.palette().text, 0.06)
+
+                                    Column {
+                                        id: notifCol
+
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        anchors.margins: 8
+                                        spacing: 2
+
+                                        Text {
+                                            width: parent.width
+                                            text: notif.n.appName ? notif.n.appName : ""
+                                            visible: text !== ""
+                                            color: Colors.palette().subtext0
+                                            font.pixelSize: 10
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            width: parent.width
+                                            text: notif.n.summary ? notif.n.summary : ""
+                                            color: Colors.palette().text
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            width: parent.width
+                                            text: notif.n.body ? notif.n.body : ""
+                                            visible: text !== ""
+                                            color: Colors.palette().subtext0
+                                            font.pixelSize: 11
+                                            wrapMode: Text.WordWrap
+                                            maximumLineCount: 3
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            visible: notifList.count === 0
+                            text: "No notifications"
+                            color: Colors.palette().subtext0
+                            font.pixelSize: 12
+                        }
+                    }
+                }
+            }
+        }
+
+        // ========================================================
+        // POWER PROFILE
+        // ========================================================
+
+        Text {
+            id: power_profile
+
+            text: root.profileIcon(PowerProfiles.profile)
+            color: powerPopup.show ? Colors.palette().pink : Colors.palette().text
+            font.pixelSize: 14
+
+            Layout.alignment: Qt.AlignHCenter
+
+            BasePopup {
+                id: powerPopup
+
+                parentItem: power_profile
+                screen: root.screen
+
+                ColumnLayout {
+                    spacing: 6
+                    implicitWidth: 220
+
+                    PopupText {
+                        text: "Power Profile"
+                        font.bold: true
+                    }
+
+                    Repeater {
+                        model: [
+                            {
+                                label: "Power Saver",
+                                icon: "󰌪",
+                                profile: PowerProfile.PowerSaver
+                            },
+                            {
+                                label: "Balanced",
+                                icon: "󰗑",
+                                profile: PowerProfile.Balanced
+                            },
+                            {
+                                label: "Performance",
+                                icon: "󱐋",
+                                profile: PowerProfile.Performance
+                            }
+                        ]
+
+                        delegate: Rectangle {
+                            id: prof
+
+                            required property var modelData
+
+                            readonly property bool selected: PowerProfiles.profile === prof.modelData.profile
+
+                            visible: prof.modelData.profile !== PowerProfile.Performance || PowerProfiles.hasPerformanceProfile
+
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 32
+
+                            radius: 6
+                            color: prof.selected ? Colors.palette().surface0 : "transparent"
+                            border.width: prof.selected ? 1 : 0
+                            border.color: Colors.palette().pink
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: 10
+                                spacing: 8
+
+                                Text {
+                                    text: prof.modelData.icon
+                                    font.pixelSize: 14
+                                    color: prof.selected ? Colors.palette().pink : Colors.palette().text
+                                }
+
+                                Text {
+                                    text: prof.modelData.label
+                                    font.pixelSize: 12
+                                    color: prof.selected ? Colors.palette().pink : Colors.palette().text
+                                    Layout.fillWidth: true
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: PowerProfiles.profile = prof.modelData.profile
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ========================================================
+        // BATTERY
+        // ========================================================
+
+        Row {
+            id: battery
+
+            property UPowerDevice power: UPower.displayDevice
+            property int lastLevel: -1
+
+            function notify(text) {
+                NotificationManager.sendNotification("battery", "Battery Status", text);
+            }
+
+            // Fires once when a threshold is crossed, instead of
+            // comparing a float to an exact number.
+            function checkLevels() {
+                const level = Math.round(power.percentage * 100);
+                const prev = lastLevel;
+                lastLevel = level;
+
+                if (prev < 0)
+                    return;
+
+                const state = power.state;
+
+                if (state === UPowerDeviceState.Discharging) {
+                    if (prev > 5 && level <= 5)
+                        notify("Shutting off soon " + level + "%");
+                    else if (prev > 20 && level <= 20)
+                        notify("Low battery " + level + "%");
+                } else if (state === UPowerDeviceState.Charging) {
+                    if (prev < 100 && level >= 100)
+                        notify("Fully charged 100%");
+                    else if (prev < 80 && level >= 80)
+                        notify("Almost full " + level + "%");
+                }
+            }
+
+            Connections {
+                target: battery.power
+
+                function onPercentageChanged() {
+                    battery.checkLevels();
+                }
+            }
+
+            visible: power.isLaptopBattery ?? false
+            Layout.alignment: Qt.AlignHCenter
+
+            Item {
+                width: 18
+                height: 18
+
+                IconImage {
+                    anchors.fill: parent
+                    source: Quickshell.iconPath(battery.power.iconName, "unknown")
+                    mipmap: true
+                    rotation: 90
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: Math.round(battery.power.percentage * 100)
+                    font.pixelSize: 11
+                    color: "black"
+                }
+            }
+
+            BasePopup {
+                id: batteryPopup
+
+                parentItem: battery
+                screen: root.screen
+
+                ColumnLayout {
+                    spacing: 4
+                    implicitWidth: 200
+
+                    PopupText {
+                        text: "Battery " + Math.round(battery.power.percentage * 100) + "%"
+                        font.bold: true
+                    }
+
+                    PopupText {
+                        text: UPowerDeviceState.toString(battery.power.state)
+                        color: Colors.palette().subtext0
+                    }
+
+                    PopupText {
+                        visible: battery.power.state === UPowerDeviceState.Discharging
+                        text: root.fmtSeconds(battery.power.timeToEmpty) + " remaining"
+                    }
+
+                    PopupText {
+                        visible: battery.power.state === UPowerDeviceState.Charging
+                        text: root.fmtSeconds(battery.power.timeToFull) + " until full"
+                    }
+
+                    PopupText {
+                        visible: Math.abs(battery.power.changeRate) > 0.1
+                        text: (battery.power.state === UPowerDeviceState.Charging ? "Charging at " : "Drawing ") + Math.abs(battery.power.changeRate).toFixed(1) + " W"
+                        color: Colors.palette().subtext0
+                    }
+                }
+            }
         }
     }
 }

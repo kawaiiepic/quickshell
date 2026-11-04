@@ -58,7 +58,7 @@ Singleton {
     property FolderListModel wallpaperEngineList: FolderListModel {
         id: wallpaperEngineList
 
-        folder: "file://" + "/home/mia/.local/share/Steam/steamapps/workshop/content/431960/"
+        folder: "file:" + "/home/mia/.local/share/Steam/steamapps/workshop/content/431960/"
         showDirs: true
         showFiles: true
     }
@@ -101,7 +101,7 @@ Singleton {
                 screenArrayString.push(screen.name);
             }
 
-            wallpaperEngineProcess.command = ["linux-wallpaperengine", "--layer", "background", "--fullscreen-pause-only-active", "--fullscreen-pause-ignore-appid", "kitty", "-v", "60", "--scaling", "fit", "--fps", "60", ...screenArrayString, "--bg", name];
+            wallpaperEngineProcess.command = ["linux-wallpaperengine", "--layer", "background", "--fullscreen-pause-only-active", "--fullscreen-pause-ignore-appid", "kitty", "-v", "60", "--scaling", "fit", "--fps", "30", ...screenArrayString, "--bg", settings.wallpaperName];
             wallpaperEngineProcess.running = true;
 
             process.command = ["notify-send", "-i", "camera", "-h", "string:image-path:" + clipPreview, "-h", "string:preview:true", "Wallpaper", "Wallpaper has been updated: \n" + name];

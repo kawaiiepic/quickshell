@@ -19,10 +19,6 @@ Variants {
 
         visible: !ToplevelManager.activeToplevel.maximized
 
-        Component.onCompleted: {
-            Niri;
-        }
-
         anchors {
             top: true
         }

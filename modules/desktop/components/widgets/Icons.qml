@@ -25,7 +25,7 @@ Scope {
             required property var modelData
 
             WlrLayershell.namespace: "quickshell-icons"
-            WlrLayershell.layer: WlrLayer.Background
+            WlrLayershell.layer: WlrLayer.bottom
 
             screen: modelData
             color: "transparent"

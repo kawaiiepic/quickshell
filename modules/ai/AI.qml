@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import Quickshell
-import Niri
 import Quickshell.Io
 
 ShellRoot {
@@ -48,18 +47,6 @@ ShellRoot {
                 console.log("sending to ai:", cleaned);
 
                 callAI(cleaned);
-            }
-        }
-    }
-
-    Item {
-        Niri {
-            id: niri
-            Component.onCompleted: connect()
-
-            onConnected: console.log("Connected to niri")
-            onErrorOccurred: function (error) {
-                console.error("Error:", error);
             }
         }
     }
